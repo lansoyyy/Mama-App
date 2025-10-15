@@ -1,5 +1,7 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:mama_app/firebase_options.dart';
 import 'utils/theme.dart';
 import 'utils/constants.dart';
 import 'screens/splash_screen.dart';
@@ -23,9 +25,13 @@ import 'screens/notifications/notifications_screen.dart';
 import 'screens/profile/edit_profile_screen.dart';
 import 'screens/auth/forgot_password_screen.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+  await Firebase.initializeApp(
+    name: 'mama-app-7bce7',
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
   // Set system UI overlay style
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
@@ -33,7 +39,7 @@ void main() {
       statusBarIconBrightness: Brightness.light,
     ),
   );
-  
+
   runApp(const MamaApp());
 }
 
@@ -46,10 +52,10 @@ class MamaApp extends StatelessWidget {
       title: AppConstants.appName,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      
+
       // Initial route
       initialRoute: '/',
-      
+
       // Routes
       routes: {
         '/': (context) => const SplashScreen(),

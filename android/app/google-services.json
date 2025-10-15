@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "603894160793",
+    "project_id": "mama-app-7bce7",
+    "storage_bucket": "mama-app-7bce7.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:603894160793:android:a66090b3e473125325c708",
+        "android_client_info": {
+          "package_name": "com.example.mama_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDlh6hlSp69VYa-MPiY8qCIMbAiKup6TXc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
