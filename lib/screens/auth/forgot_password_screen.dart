@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../utils/colors.dart';
 import '../../utils/constants.dart';
 import '../../widgets/custom_button.dart';
+import '../../services/auth_service.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -13,6 +14,7 @@ class ForgotPasswordScreen extends StatefulWidget {
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _emailController = TextEditingController();
+  final AuthService _authService = AuthService();
   bool _isLoading = false;
   bool _emailSent = false;
 
@@ -22,21 +24,52 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     super.dispose();
   }
 
-  void _sendResetLink() {
+  Future<void> _sendResetLink() async {
     if (_formKey.currentState!.validate()) {
       setState(() {
         _isLoading = true;
       });
 
-      // TODO: Implement password reset API call
-      Future.delayed(const Duration(seconds: 2), () {
+      try {
+        // Send password reset email via Firebase
+        final result = await _authService.sendPasswordResetEmail(
+          _emailController.text.trim(),
+        );
+
         if (mounted) {
           setState(() {
             _isLoading = false;
-            _emailSent = true;
           });
+
+          if (result['success']) {
+            setState(() {
+              _emailSent = true;
+            });
+            Navigator.pushNamed(context, '/login');
+          } else {
+            // Show error message
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(result['message']),
+                backgroundColor: AppColors.error,
+              ),
+            );
+          }
         }
-      });
+      } catch (e) {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('An error occurred. Please try again.'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      }
     }
   }
 
@@ -214,7 +247,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             children: [
               Row(
                 children: [
-                  Icon(Icons.info_outline, color: AppColors.info, size: AppConstants.iconM),
+                  Icon(Icons.info_outline,
+                      color: AppColors.info, size: AppConstants.iconM),
                   const SizedBox(width: AppConstants.paddingS),
                   const Text(
                     'What\'s next?',
@@ -340,7 +374,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             onPressed: () {
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Contact support feature coming soon')),
+                const SnackBar(
+                    content: Text('Contact support feature coming soon')),
               );
             },
             child: const Text('Contact Support'),

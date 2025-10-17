@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:mama_app/firebase_options.dart';
 import 'utils/theme.dart';
 import 'utils/constants.dart';
+import 'widgets/auth_wrapper.dart';
 import 'screens/splash_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/auth/login_screen.dart';
@@ -53,12 +54,13 @@ class MamaApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
 
-      // Initial route
+      // Initial route - AuthWrapper handles auto-login
       initialRoute: '/',
 
       // Routes
       routes: {
-        '/': (context) => const SplashScreen(),
+        '/': (context) => const AuthWrapper(),
+        '/splash': (context) => const SplashScreen(),
         '/onboarding': (context) => const OnboardingScreen(),
         '/login': (context) => const LoginScreen(),
         '/signup': (context) => const SignupScreen(),

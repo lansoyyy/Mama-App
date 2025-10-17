@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../utils/colors.dart';
 import '../../utils/constants.dart';
 import '../../widgets/custom_button.dart';
+import '../../services/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -14,6 +15,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final AuthService _authService = AuthService();
   bool _obscurePassword = true;
   bool _isLoading = false;
 
@@ -24,21 +26,58 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _handleLogin() {
+  Future<void> _handleLogin() async {
     if (_formKey.currentState!.validate()) {
       setState(() {
         _isLoading = true;
       });
-      
-      // TODO: Implement login logic
-      Future.delayed(const Duration(seconds: 2), () {
+
+      try {
+        // Sign in with Firebase
+        final result = await _authService.signIn(
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+        );
+
         if (mounted) {
           setState(() {
             _isLoading = false;
           });
-          Navigator.pushReplacementNamed(context, '/home');
+
+          if (result['success']) {
+            // AuthWrapper will automatically navigate to home
+            // Just show success message
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(result['message']),
+                backgroundColor: AppColors.success,
+              ),
+            );
+            Navigator.pushNamed(context, '/home');
+          } else {
+            // Show error message
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(result['message']),
+                backgroundColor: AppColors.error,
+              ),
+            );
+          }
         }
-      });
+      } catch (e) {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('An error occurred. Please try again.'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      }
     }
   }
 
@@ -54,7 +93,7 @@ class _LoginScreenState extends State<LoginScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const SizedBox(height: AppConstants.paddingXL),
-                
+
                 // Logo
                 Center(
                   child: Container(
@@ -72,7 +111,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: AppConstants.paddingL),
-                
+
                 // Welcome Text
                 const Text(
                   'Welcome Back!',
@@ -93,7 +132,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: AppConstants.paddingXL),
-                
+
                 // Email Field
                 TextFormField(
                   controller: _emailController,
@@ -114,7 +153,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   },
                 ),
                 const SizedBox(height: AppConstants.paddingM),
-                
+
                 // Password Field
                 TextFormField(
                   controller: _passwordController,
@@ -147,7 +186,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   },
                 ),
                 const SizedBox(height: AppConstants.paddingM),
-                
+
                 // Forgot Password
                 Align(
                   alignment: Alignment.centerRight,
@@ -159,7 +198,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: AppConstants.paddingL),
-                
+
                 // Login Button
                 CustomButton(
                   text: 'Login',
@@ -168,7 +207,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   fullWidth: true,
                 ),
                 const SizedBox(height: AppConstants.paddingM),
-                
+
                 // Divider
                 Row(
                   children: [
@@ -189,7 +228,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ],
                 ),
                 const SizedBox(height: AppConstants.paddingM),
-                
+
                 // Sign Up Link
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,

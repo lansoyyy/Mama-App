@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../utils/colors.dart';
 import '../../utils/constants.dart';
 import '../../widgets/custom_button.dart';
+import '../../services/auth_service.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -16,6 +17,7 @@ class _SignupScreenState extends State<SignupScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final AuthService _authService = AuthService();
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _isLoading = false;
@@ -30,21 +32,71 @@ class _SignupScreenState extends State<SignupScreen> {
     super.dispose();
   }
 
-  void _handleSignup() {
+  Future<void> _handleSignup() async {
     if (_formKey.currentState!.validate()) {
+      // Check if passwords match
+      if (_passwordController.text != _confirmPasswordController.text) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Passwords do not match'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+        return;
+      }
+
       setState(() {
         _isLoading = true;
       });
-      
-      // TODO: Implement signup logic
-      Future.delayed(const Duration(seconds: 2), () {
+
+      try {
+        // Sign up with Firebase
+        final result = await _authService.signUp(
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+          fullName: _nameController.text.trim(),
+          userType: _selectedUserType,
+        );
+
         if (mounted) {
           setState(() {
             _isLoading = false;
           });
-          Navigator.pushReplacementNamed(context, '/home');
+
+          if (result['success']) {
+            // AuthWrapper will automatically navigate to home
+            // Just show success message
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(result['message']),
+                backgroundColor: AppColors.success,
+              ),
+            );
+            Navigator.pushNamed(context, '/login');
+          } else {
+            // Show error message
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(result['message']),
+                backgroundColor: AppColors.error,
+              ),
+            );
+          }
         }
-      });
+      } catch (e) {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('An error occurred. Please try again.'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      }
     }
   }
 
@@ -84,7 +136,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: AppConstants.paddingXL),
-                
+
                 // User Type Selection
                 const Text(
                   'I am a:',
@@ -100,7 +152,8 @@ class _SignupScreenState extends State<SignupScreen> {
                   children: [
                     ChoiceChip(
                       label: const Text('Mother'),
-                      selected: _selectedUserType == AppConstants.userTypeMother,
+                      selected:
+                          _selectedUserType == AppConstants.userTypeMother,
                       onSelected: (selected) {
                         setState(() {
                           _selectedUserType = AppConstants.userTypeMother;
@@ -109,7 +162,8 @@ class _SignupScreenState extends State<SignupScreen> {
                     ),
                     ChoiceChip(
                       label: const Text('Caregiver'),
-                      selected: _selectedUserType == AppConstants.userTypeCaregiver,
+                      selected:
+                          _selectedUserType == AppConstants.userTypeCaregiver,
                       onSelected: (selected) {
                         setState(() {
                           _selectedUserType = AppConstants.userTypeCaregiver;
@@ -118,7 +172,8 @@ class _SignupScreenState extends State<SignupScreen> {
                     ),
                     ChoiceChip(
                       label: const Text('Health Worker'),
-                      selected: _selectedUserType == AppConstants.userTypeHealthWorker,
+                      selected: _selectedUserType ==
+                          AppConstants.userTypeHealthWorker,
                       onSelected: (selected) {
                         setState(() {
                           _selectedUserType = AppConstants.userTypeHealthWorker;
@@ -128,7 +183,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   ],
                 ),
                 const SizedBox(height: AppConstants.paddingL),
-                
+
                 // Name Field
                 TextFormField(
                   controller: _nameController,
@@ -145,7 +200,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   },
                 ),
                 const SizedBox(height: AppConstants.paddingM),
-                
+
                 // Email Field
                 TextFormField(
                   controller: _emailController,
@@ -166,7 +221,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   },
                 ),
                 const SizedBox(height: AppConstants.paddingM),
-                
+
                 // Password Field
                 TextFormField(
                   controller: _passwordController,
@@ -199,7 +254,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   },
                 ),
                 const SizedBox(height: AppConstants.paddingM),
-                
+
                 // Confirm Password Field
                 TextFormField(
                   controller: _confirmPasswordController,
@@ -232,7 +287,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   },
                 ),
                 const SizedBox(height: AppConstants.paddingXL),
-                
+
                 // Signup Button
                 CustomButton(
                   text: 'Sign Up',
@@ -241,7 +296,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   fullWidth: true,
                 ),
                 const SizedBox(height: AppConstants.paddingM),
-                
+
                 // Login Link
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,

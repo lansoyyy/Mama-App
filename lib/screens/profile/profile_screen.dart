@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../utils/colors.dart';
 import '../../utils/constants.dart';
 import '../../widgets/custom_card.dart';
+import '../../services/auth_service.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -123,6 +124,8 @@ class ProfileScreen extends StatelessWidget {
   }
 
   static void _showLogoutDialog(BuildContext context) {
+    final AuthService authService = AuthService();
+    
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -134,10 +137,53 @@ class ProfileScreen extends StatelessWidget {
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
-              Navigator.pushNamedAndRemoveUntil(
-                  context, '/login', (route) => false);
+              
+              // Show loading indicator
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (context) => const Center(
+                  child: CircularProgressIndicator(),
+                ),
+              );
+              
+              try {
+                // Sign out from Firebase
+                await authService.signOut();
+                
+                if (context.mounted) {
+                  // Close loading indicator
+                  Navigator.pop(context);
+                  
+                  // Navigate to login screen
+                  Navigator.pushNamedAndRemoveUntil(
+                    context, '/login', (route) => false,
+                  );
+                  
+                  // Show success message
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Logged out successfully'),
+                      backgroundColor: AppColors.success,
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  // Close loading indicator
+                  Navigator.pop(context);
+                  
+                  // Show error message
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Error logging out. Please try again.'),
+                      backgroundColor: AppColors.error,
+                    ),
+                  );
+                }
+              }
             },
             child:
                 const Text('Logout', style: TextStyle(color: AppColors.error)),
