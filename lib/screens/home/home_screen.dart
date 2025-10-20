@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../utils/colors.dart';
 import '../../utils/constants.dart';
 import '../../widgets/stat_card.dart';
 import '../../widgets/medication_card.dart';
 import '../profile/profile_screen.dart' show ProfileScreen;
+import '../medications/medications_screen.dart' show MedicationsScreen;
 import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
 
@@ -18,14 +20,18 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
 
+  // Key to access the IndexedStack state
+  final GlobalKey<_HomeScreenState> _homeKey = GlobalKey();
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: _homeKey,
       body: IndexedStack(
         index: _selectedIndex,
-        children: const [
-          DashboardScreen(),
-          MedicationsScreen(),
+        children: [
+          DashboardScreen(key: ValueKey(_selectedIndex)),
+          MedicationsScreen(key: ValueKey(_selectedIndex)),
           FeaturesScreen(),
           ProfileScreen(),
         ],
@@ -87,6 +93,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String _userName = 'User';
   String? _profilePictureUrl;
   bool _isLoading = true;
+  Map<String, dynamic>? _medicationStats;
 
   @override
   void initState() {
@@ -98,12 +105,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     try {
       final userId = _authService.currentUserId;
       if (userId != null) {
+        // Load user data
         final userData = await _firestoreService.getUser(userId);
         if (userData != null) {
           setState(() {
             _userName = userData['fullName'] ?? 'User';
             _profilePictureUrl = userData['profilePicture'] ?? '';
-            _isLoading = false;
           });
         } else {
           // Fallback to Firebase Auth display name if Firestore doesn't have the name
@@ -111,15 +118,38 @@ class _DashboardScreenState extends State<DashboardScreen> {
           setState(() {
             _userName = user?.displayName ?? 'User';
             _profilePictureUrl = '';
-            _isLoading = false;
           });
         }
+
+        // Load medication stats
+        await _loadMedicationStats();
+
+        setState(() {
+          _isLoading = false;
+        });
       }
     } catch (e) {
       print('Error loading user data: $e');
       setState(() {
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _loadMedicationStats() async {
+    try {
+      final userId = _authService.currentUserId;
+      if (userId != null) {
+        final stats = await _firestoreService.getMedicationStats(userId);
+        setState(() {
+          _medicationStats = stats;
+        });
+
+        // Generate daily logs if needed
+        await _firestoreService.generateDailyMedicationLogs(userId);
+      }
+    } catch (e) {
+      print('Error loading medication stats: $e');
     }
   }
 
@@ -227,34 +257,44 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     mainAxisSpacing: AppConstants.paddingM,
                     crossAxisSpacing: AppConstants.paddingM,
                     childAspectRatio: 1,
-                    children: const [
+                    children: [
                       StatCard(
                         title: 'Adherence Rate',
-                        value: '92%',
+                        value: '${_medicationStats?['adherenceRate'] ?? 0}%',
                         icon: Icons.trending_up,
                         color: AppColors.success,
-                        subtitle: 'Excellent!',
+                        subtitle: (_medicationStats?['adherenceRate'] ?? 0) >=
+                                90
+                            ? 'Excellent!'
+                            : (_medicationStats?['adherenceRate'] ?? 0) >= 75
+                                ? 'Good!'
+                                : 'Keep trying!',
                       ),
                       StatCard(
                         title: 'Today\'s Doses',
-                        value: '3/4',
+                        value:
+                            '${_medicationStats?['totalTaken'] ?? 0}/${_medicationStats?['totalScheduled'] ?? 0}',
                         icon: Icons.medication,
                         color: AppColors.primary,
-                        subtitle: '1 remaining',
+                        subtitle:
+                            '${_medicationStats?['totalPending'] ?? 0} remaining',
                       ),
                       StatCard(
                         title: 'Streak Days',
-                        value: '12',
+                        value: '${_medicationStats?['streakDays'] ?? 0}',
                         icon: Icons.local_fire_department,
                         color: AppColors.reward,
-                        subtitle: 'Keep it up!',
+                        subtitle: (_medicationStats?['streakDays'] ?? 0) > 0
+                            ? 'Keep it up!'
+                            : 'Start today!',
                       ),
                       StatCard(
                         title: 'Reward Points',
-                        value: '850',
+                        value: '${_medicationStats?['rewardPoints'] ?? 0}',
                         icon: Icons.stars,
                         color: AppColors.secondary,
-                        subtitle: '150 to next reward',
+                        subtitle:
+                            '${1000 - ((_medicationStats?['rewardPoints'] ?? 0) % 1000)} to next reward',
                       ),
                     ],
                   ),
@@ -292,31 +332,138 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
 
           // Medication List
-          SliverList(
-            delegate: SliverChildListDelegate([
-              MedicationCard(
-                medicationName: 'Prenatal Vitamins',
-                dosage: '1 tablet',
-                time: '2:00 PM',
-                status: 'pending',
-                onMarkTaken: () {},
-                onMarkMissed: () {},
-              ),
-              MedicationCard(
-                medicationName: 'Iron Supplement',
-                dosage: '500mg',
-                time: '8:00 AM',
-                status: 'taken',
-              ),
-              MedicationCard(
-                medicationName: 'Folic Acid',
-                dosage: '400mcg',
-                time: '9:00 PM',
-                status: 'pending',
-                onMarkTaken: () {},
-                onMarkMissed: () {},
-              ),
-            ]),
+          StreamBuilder<QuerySnapshot>(
+            stream: _authService.currentUserId != null
+                ? _firestoreService
+                    .getTodayMedicationLogs(_authService.currentUserId!)
+                : Stream.empty(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.all(AppConstants.paddingL),
+                    child: Center(child: CircularProgressIndicator()),
+                  ),
+                );
+              }
+
+              if (snapshot.hasError || !snapshot.hasData) {
+                return const SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.all(AppConstants.paddingL),
+                    child: Center(
+                      child: Text(
+                        'Error loading medications',
+                        style: TextStyle(color: AppColors.error),
+                      ),
+                    ),
+                  ),
+                );
+              }
+
+              final medications =
+                  snapshot.data!.docs.take(3).toList(); // Show only first 3
+
+              if (medications.isEmpty) {
+                return const SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.all(AppConstants.paddingL),
+                    child: Center(
+                      child: Text(
+                        'No medications scheduled for today',
+                        style: TextStyle(color: AppColors.textSecondary),
+                      ),
+                    ),
+                  ),
+                );
+              }
+
+              return SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    final doc = medications[index];
+                    final data = doc.data() as Map<String, dynamic>;
+                    final medicationName =
+                        data['medicationName'] ?? 'Unknown Medication';
+                    final dosage = data['dosage'] ?? 'Unknown Dosage';
+                    final scheduledDate =
+                        (data['scheduledDate'] as Timestamp).toDate();
+                    final status = data['status'] ?? 'pending';
+                    final logId = doc.id;
+                    final medicationId = data['medicationId'] ?? '';
+
+                    String _formatTime(DateTime dateTime) {
+                      final hour = dateTime.hour;
+                      final minute = dateTime.minute;
+                      final period = hour >= 12 ? 'PM' : 'AM';
+                      final displayHour =
+                          hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
+                      return '$displayHour:${minute.toString().padLeft(2, '0')} $period';
+                    }
+
+                    return MedicationCard(
+                      medicationName: medicationName,
+                      dosage: dosage,
+                      time: _formatTime(scheduledDate),
+                      status: status,
+                      onMarkTaken: status == 'pending'
+                          ? () async {
+                              try {
+                                await _firestoreService
+                                    .updateMedicationIntakeStatus(
+                                  logId: logId,
+                                  status: 'taken',
+                                );
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                        '$medicationName marked as taken!'),
+                                    backgroundColor: AppColors.success,
+                                  ),
+                                );
+                                _loadMedicationStats();
+                              } catch (e) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Error: $e'),
+                                    backgroundColor: AppColors.error,
+                                  ),
+                                );
+                              }
+                            }
+                          : null,
+                      onMarkMissed: status == 'pending'
+                          ? () async {
+                              try {
+                                await _firestoreService
+                                    .updateMedicationIntakeStatus(
+                                  logId: logId,
+                                  status: 'missed',
+                                );
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                        '$medicationName marked as missed'),
+                                    backgroundColor: AppColors.warning,
+                                  ),
+                                );
+                                _loadMedicationStats();
+                              } catch (e) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Error: $e'),
+                                    backgroundColor: AppColors.error,
+                                  ),
+                                );
+                              }
+                            }
+                          : null,
+                    );
+                  },
+                  childCount: medications.length,
+                ),
+              );
+            },
           ),
 
           // Quick Actions
@@ -455,225 +602,216 @@ class _QuickActionCard extends StatelessWidget {
 
 // Add Medication Dialog
 void _showAddMedicationDialog(BuildContext context) {
-  final TextEditingController nameController = TextEditingController();
-  final TextEditingController dosageController = TextEditingController();
-  String selectedFrequency = 'Daily';
-  TimeOfDay selectedTime = TimeOfDay.now();
-
   showDialog(
     context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('Add Medication'),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameController,
-              decoration: const InputDecoration(
-                labelText: 'Medication Name',
-                hintText: 'e.g., Prenatal Vitamins',
-                prefixIcon: Icon(Icons.medication),
-              ),
-            ),
-            const SizedBox(height: AppConstants.paddingM),
-            TextField(
-              controller: dosageController,
-              decoration: const InputDecoration(
-                labelText: 'Dosage',
-                hintText: 'e.g., 1 tablet, 500mg',
-                prefixIcon: Icon(Icons.medical_information),
-              ),
-            ),
-            const SizedBox(height: AppConstants.paddingM),
-            DropdownButtonFormField<String>(
-              value: selectedFrequency,
-              decoration: const InputDecoration(
-                labelText: 'Frequency',
-                prefixIcon: Icon(Icons.repeat),
-              ),
-              items: ['Daily', 'Twice Daily', 'Three Times Daily', 'Weekly']
-                  .map((freq) => DropdownMenuItem(
-                        value: freq,
-                        child: Text(freq),
-                      ))
-                  .toList(),
-              onChanged: (value) {
-                selectedFrequency = value!;
-              },
-            ),
-            const SizedBox(height: AppConstants.paddingM),
-            ListTile(
-              leading: const Icon(Icons.access_time),
-              title: const Text('Time'),
-              subtitle: Text(selectedTime.format(context)),
-              onTap: () async {
-                final TimeOfDay? time = await showTimePicker(
-                  context: context,
-                  initialTime: selectedTime,
-                );
-                if (time != null) {
-                  selectedTime = time;
-                }
-              },
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
-        ),
-        ElevatedButton(
-          onPressed: () {
-            if (nameController.text.isNotEmpty &&
-                dosageController.text.isNotEmpty) {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('${nameController.text} added successfully!'),
-                  backgroundColor: AppColors.success,
-                ),
-              );
-            } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Please fill in all fields'),
-                  backgroundColor: AppColors.error,
-                ),
-              );
-            }
-          },
-          child: const Text('Add'),
-        ),
-      ],
+    builder: (context) => AddMedicationDialog(
+      onMedicationAdded: () {
+        Navigator.pop(context);
+        // Switch to the Medications tab and then back to refresh
+        final homeScreenState =
+            context.findAncestorStateOfType<_HomeScreenState>();
+        if (homeScreenState != null) {
+          homeScreenState.setState(() {
+            homeScreenState._selectedIndex = 1; // Switch to Medications tab
+          });
+
+          // Switch back to Dashboard after a brief delay
+          Future.delayed(const Duration(milliseconds: 100), () {
+            homeScreenState.setState(() {
+              homeScreenState._selectedIndex = 0; // Back to Dashboard
+            });
+          });
+        }
+      },
     ),
   );
 }
 
-// Placeholder screens for bottom navigation
-class MedicationsScreen extends StatelessWidget {
-  const MedicationsScreen({super.key});
+class AddMedicationDialog extends StatefulWidget {
+  final VoidCallback onMedicationAdded;
+
+  const AddMedicationDialog({
+    super.key,
+    required this.onMedicationAdded,
+  });
+
+  @override
+  State<AddMedicationDialog> createState() => _AddMedicationDialogState();
+}
+
+class _AddMedicationDialogState extends State<AddMedicationDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
+  final _dosageController = TextEditingController();
+  final _notesController = TextEditingController();
+  String _selectedFrequency = 'Daily';
+  TimeOfDay _selectedTime = TimeOfDay.now();
+  bool _isLoading = false;
+
+  final FirestoreService _firestoreService = FirestoreService();
+  final AuthService _authService = AuthService();
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _dosageController.dispose();
+    _notesController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _addMedication() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final userId = _authService.currentUserId;
+      if (userId != null) {
+        final timeString =
+            '${_selectedTime.hourOfPeriod}:${_selectedTime.minute.toString().padLeft(2, '0')} ${_selectedTime.period.name.toUpperCase()}';
+
+        await _firestoreService.addMedication(
+          userId: userId,
+          name: _nameController.text.trim(),
+          dosage: _dosageController.text.trim(),
+          frequency: _selectedFrequency,
+          time: timeString,
+          notes: _notesController.text.trim(),
+        );
+
+        widget.onMedicationAdded();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${_nameController.text.trim()} added successfully!'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error adding medication: $e'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Medications'),
-        backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.textWhite,
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(AppConstants.paddingM),
-        children: [
-          // Quick Stats
-          Row(
+    return AlertDialog(
+      title: const Text('Add Medication'),
+      content: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Expanded(
-                child: _buildMedicationStatCard(
-                  'Active',
-                  '8',
-                  Icons.medication,
-                  AppColors.primary,
+              TextFormField(
+                controller: _nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Medication Name',
+                  hintText: 'e.g., Prenatal Vitamins',
+                  prefixIcon: Icon(Icons.medication),
                 ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Please enter medication name';
+                  }
+                  return null;
+                },
               ),
-              const SizedBox(width: AppConstants.paddingM),
-              Expanded(
-                child: _buildMedicationStatCard(
-                  'Today',
-                  '4',
-                  Icons.today,
-                  AppColors.info,
+              const SizedBox(height: AppConstants.paddingM),
+              TextFormField(
+                controller: _dosageController,
+                decoration: const InputDecoration(
+                  labelText: 'Dosage',
+                  hintText: 'e.g., 1 tablet, 500mg',
+                  prefixIcon: Icon(Icons.medical_information),
                 ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Please enter dosage';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: AppConstants.paddingM),
+              DropdownButtonFormField<String>(
+                value: _selectedFrequency,
+                decoration: const InputDecoration(
+                  labelText: 'Frequency',
+                  prefixIcon: Icon(Icons.repeat),
+                ),
+                items: ['Daily', 'Twice Daily', 'Three Times Daily', 'Weekly']
+                    .map((freq) => DropdownMenuItem(
+                          value: freq,
+                          child: Text(freq),
+                        ))
+                    .toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _selectedFrequency = value!;
+                  });
+                },
+              ),
+              const SizedBox(height: AppConstants.paddingM),
+              ListTile(
+                leading: const Icon(Icons.access_time),
+                title: const Text('Time'),
+                subtitle: Text(_selectedTime.format(context)),
+                onTap: () async {
+                  final TimeOfDay? time = await showTimePicker(
+                    context: context,
+                    initialTime: _selectedTime,
+                  );
+                  if (time != null) {
+                    setState(() {
+                      _selectedTime = time;
+                    });
+                  }
+                },
+              ),
+              const SizedBox(height: AppConstants.paddingM),
+              TextFormField(
+                controller: _notesController,
+                decoration: const InputDecoration(
+                  labelText: 'Notes (Optional)',
+                  hintText: 'Add any additional notes',
+                  prefixIcon: Icon(Icons.note),
+                ),
+                maxLines: 2,
               ),
             ],
           ),
-          const SizedBox(height: AppConstants.paddingL),
-
-          // Medications List
-          const Text(
-            'All Medications',
-            style: TextStyle(
-              fontSize: AppConstants.fontXL,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: AppConstants.paddingM),
-
-          MedicationCard(
-            medicationName: 'Prenatal Vitamins',
-            dosage: '1 tablet',
-            time: '8:00 AM',
-            status: 'pending',
-            onMarkTaken: () {},
-            onMarkMissed: () {},
-          ),
-          MedicationCard(
-            medicationName: 'Iron Supplement',
-            dosage: '500mg',
-            time: '8:00 AM',
-            status: 'taken',
-          ),
-          MedicationCard(
-            medicationName: 'Folic Acid',
-            dosage: '400mcg',
-            time: '9:00 PM',
-            status: 'pending',
-            onMarkTaken: () {},
-            onMarkMissed: () {},
-          ),
-          MedicationCard(
-            medicationName: 'Calcium',
-            dosage: '600mg',
-            time: '2:00 PM',
-            status: 'pending',
-            onMarkTaken: () {},
-            onMarkMissed: () {},
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          _showAddMedicationDialog(context);
-        },
-        child: const Icon(Icons.add),
-      ),
-    );
-  }
-
-  static Widget _buildMedicationStatCard(
-    String label,
-    String value,
-    IconData icon,
-    Color color,
-  ) {
-    return Card(
-      elevation: AppConstants.elevationS,
-      child: Padding(
-        padding: const EdgeInsets.all(AppConstants.paddingM),
-        child: Column(
-          children: [
-            Icon(icon, color: color, size: AppConstants.iconL),
-            const SizedBox(height: AppConstants.paddingS),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: AppConstants.fontXXL,
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
-            ),
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: AppConstants.fontM,
-                color: AppColors.textSecondary,
-              ),
-            ),
-          ],
         ),
       ),
+      actions: [
+        TextButton(
+          onPressed: _isLoading ? null : () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: _isLoading ? null : _addMedication,
+          child: _isLoading
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: AppColors.textWhite,
+                  ),
+                )
+              : const Text('Add'),
+        ),
+      ],
     );
   }
 }

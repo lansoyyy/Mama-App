@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../utils/constants.dart';
 
 /// Firestore Service for managing user data
 class FirestoreService {
@@ -6,8 +7,12 @@ class FirestoreService {
 
   /// Collection references
   CollectionReference get _usersCollection => _firestore.collection('users');
-  CollectionReference get _medicationsCollection => _firestore.collection('medications');
-  CollectionReference get _healthRecordsCollection => _firestore.collection('health_records');
+  CollectionReference get _medicationsCollection =>
+      _firestore.collection('medications');
+  CollectionReference get _medicationLogsCollection =>
+      _firestore.collection('medication_logs');
+  CollectionReference get _healthRecordsCollection =>
+      _firestore.collection('health_records');
 
   /// Create user document
   Future<void> createUser({
@@ -73,15 +78,16 @@ class FirestoreService {
   }) async {
     try {
       Map<String, dynamic> updates = {};
-      
+
       if (fullName != null) updates['fullName'] = fullName;
       if (phoneNumber != null) updates['phoneNumber'] = phoneNumber;
       if (dateOfBirth != null) updates['dateOfBirth'] = dateOfBirth;
       if (bloodType != null) updates['bloodType'] = bloodType;
       if (address != null) updates['address'] = address;
-      if (emergencyContact != null) updates['emergencyContact'] = emergencyContact;
+      if (emergencyContact != null)
+        updates['emergencyContact'] = emergencyContact;
       if (userType != null) updates['userType'] = userType;
-      
+
       updates['updatedAt'] = FieldValue.serverTimestamp();
 
       await _usersCollection.doc(uid).update(updates);
@@ -98,10 +104,11 @@ class FirestoreService {
   }) async {
     try {
       Map<String, dynamic> updates = {};
-      
+
       if (allergies != null) updates['allergies'] = allergies;
-      if (chronicConditions != null) updates['chronicConditions'] = chronicConditions;
-      
+      if (chronicConditions != null)
+        updates['chronicConditions'] = chronicConditions;
+
       updates['updatedAt'] = FieldValue.serverTimestamp();
 
       await _usersCollection.doc(uid).update(updates);
@@ -142,11 +149,11 @@ class FirestoreService {
   }) async {
     try {
       Map<String, dynamic> updates = {};
-      
+
       if (adherenceRate != null) updates['adherenceRate'] = adherenceRate;
       if (streakDays != null) updates['streakDays'] = streakDays;
       if (rewardPoints != null) updates['rewardPoints'] = rewardPoints;
-      
+
       updates['updatedAt'] = FieldValue.serverTimestamp();
 
       await _usersCollection.doc(uid).update(updates);
@@ -159,17 +166,15 @@ class FirestoreService {
   Future<void> deleteUser(String uid) async {
     try {
       // Delete user medications
-      QuerySnapshot medications = await _medicationsCollection
-          .where('userId', isEqualTo: uid)
-          .get();
+      QuerySnapshot medications =
+          await _medicationsCollection.where('userId', isEqualTo: uid).get();
       for (var doc in medications.docs) {
         await doc.reference.delete();
       }
 
       // Delete user health records
-      QuerySnapshot healthRecords = await _healthRecordsCollection
-          .where('userId', isEqualTo: uid)
-          .get();
+      QuerySnapshot healthRecords =
+          await _healthRecordsCollection.where('userId', isEqualTo: uid).get();
       for (var doc in healthRecords.docs) {
         await doc.reference.delete();
       }
@@ -229,14 +234,14 @@ class FirestoreService {
   }) async {
     try {
       Map<String, dynamic> updates = {};
-      
+
       if (name != null) updates['name'] = name;
       if (dosage != null) updates['dosage'] = dosage;
       if (frequency != null) updates['frequency'] = frequency;
       if (time != null) updates['time'] = time;
       if (notes != null) updates['notes'] = notes;
       if (isActive != null) updates['isActive'] = isActive;
-      
+
       updates['updatedAt'] = FieldValue.serverTimestamp();
 
       await _medicationsCollection.doc(medicationId).update(updates);
@@ -300,6 +305,388 @@ class FirestoreService {
       return query.docs.isNotEmpty;
     } catch (e) {
       throw Exception('Error checking email: $e');
+    }
+  }
+
+  /// Update user adherence stats
+  Future<void> updateUserAdherenceStats(String userId) async {
+    try {
+      // Get current user stats
+      DocumentSnapshot userDoc = await _usersCollection.doc(userId).get();
+      if (!userDoc.exists) return;
+
+      int currentPoints = userDoc.get('rewardPoints') ?? 0;
+      int currentStreak = userDoc.get('streakDays') ?? 0;
+
+      // Add points for taking medication
+      int newPoints = currentPoints + AppConstants.pointsPerDose;
+
+      // Check if streak should be updated
+      DateTime now = DateTime.now();
+      DateTime yesterday = now.subtract(const Duration(days: 1));
+      DateTime startOfYesterday =
+          DateTime(yesterday.year, yesterday.month, yesterday.day);
+      DateTime endOfYesterday = startOfYesterday.add(const Duration(days: 1));
+
+      // Check if user took any medications yesterday
+      QuerySnapshot yesterdayLogs = await _medicationLogsCollection
+          .where('userId', isEqualTo: userId)
+          .where('scheduledDate', isGreaterThanOrEqualTo: startOfYesterday)
+          .where('scheduledDate', isLessThan: endOfYesterday)
+          .where('status', isEqualTo: 'taken')
+          .get();
+
+      int newStreak = currentStreak;
+      if (yesterdayLogs.docs.isNotEmpty) {
+        // User took medications yesterday, increment streak
+        newStreak = currentStreak + 1;
+      } else {
+        // Reset streak if no medications taken yesterday
+        newStreak = 1;
+      }
+
+      // Update user stats
+      await _usersCollection.doc(userId).update({
+        'rewardPoints': newPoints,
+        'streakDays': newStreak,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      print('Error updating user adherence stats: $e');
+    }
+  }
+
+  /// Get today's medication logs for a user
+  Stream<QuerySnapshot> getTodayMedicationLogs(String userId) {
+    DateTime now = DateTime.now();
+    DateTime startOfDay = DateTime(now.year, now.month, now.day);
+    DateTime endOfDay = startOfDay.add(const Duration(days: 1));
+
+    return _medicationLogsCollection
+        .where('userId', isEqualTo: userId)
+        .where('scheduledDate', isGreaterThanOrEqualTo: startOfDay)
+        .where('scheduledDate', isLessThan: endOfDay)
+        .orderBy('scheduledDate')
+        .snapshots();
+  }
+
+  /// Log medication intake
+  Future<String> logMedicationIntake({
+    required String userId,
+    required String medicationId,
+    required String medicationName,
+    required String dosage,
+    required DateTime scheduledDate,
+    required String status,
+    String? notes,
+  }) async {
+    try {
+      DocumentReference doc = await _medicationLogsCollection.add({
+        'userId': userId,
+        'medicationId': medicationId,
+        'medicationName': medicationName,
+        'dosage': dosage,
+        'scheduledDate': scheduledDate,
+        'takenDate': status == 'taken' ? FieldValue.serverTimestamp() : null,
+        'status': status,
+        'notes': notes ?? '',
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      // Update user adherence stats if medication was taken
+      if (status == 'taken') {
+        updateUserAdherenceStats(userId);
+      }
+
+      return doc.id;
+    } catch (e) {
+      throw Exception('Error logging medication intake: $e');
+    }
+  }
+
+  /// Update medication intake status
+  Future<void> updateMedicationIntakeStatus({
+    required String logId,
+    required String status,
+    String? notes,
+  }) async {
+    try {
+      Map<String, dynamic> updates = {
+        'status': status,
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+
+      if (status == 'taken') {
+        updates['takenDate'] = FieldValue.serverTimestamp();
+      }
+
+      if (notes != null) {
+        updates['notes'] = notes;
+      }
+
+      await _medicationLogsCollection.doc(logId).update(updates);
+
+      // Get the log to find userId for stats update
+      DocumentSnapshot logDoc =
+          await _medicationLogsCollection.doc(logId).get();
+      if (logDoc.exists) {
+        String userId = logDoc.get('userId');
+        if (status == 'taken') {
+          updateUserAdherenceStats(userId);
+        }
+      }
+    } catch (e) {
+      throw Exception('Error updating medication intake status: $e');
+    }
+  }
+
+  /// Get medication adherence statistics for a user
+  Future<Map<String, dynamic>> getMedicationStats(String userId) async {
+    try {
+      DateTime now = DateTime.now();
+      DateTime startOfDay = DateTime(now.year, now.month, now.day);
+      DateTime endOfDay = startOfDay.add(const Duration(days: 1));
+      DateTime weekAgo = now.subtract(const Duration(days: 7));
+
+      // Get today's scheduled doses
+      QuerySnapshot todayLogs = await _medicationLogsCollection
+          .where('userId', isEqualTo: userId)
+          .where('scheduledDate', isGreaterThanOrEqualTo: startOfDay)
+          .where('scheduledDate', isLessThan: endOfDay)
+          .get();
+
+      // Get this week's logs for adherence calculation
+      QuerySnapshot weekLogs = await _medicationLogsCollection
+          .where('userId', isEqualTo: userId)
+          .where('scheduledDate', isGreaterThanOrEqualTo: weekAgo)
+          .get();
+
+      // Get all active medications
+      QuerySnapshot activeMeds = await _medicationsCollection
+          .where('userId', isEqualTo: userId)
+          .where('isActive', isEqualTo: true)
+          .get();
+
+      int totalScheduled = todayLogs.docs.length;
+      int totalTaken = 0;
+      int totalMissed = 0;
+      int totalPending = 0;
+
+      for (var doc in todayLogs.docs) {
+        String status = doc.get('status');
+        if (status == 'taken') {
+          totalTaken++;
+        } else if (status == 'missed') {
+          totalMissed++;
+        } else if (status == 'pending') {
+          totalPending++;
+        }
+      }
+
+      // Calculate adherence rate for the week
+      int weekTotal = weekLogs.docs.length;
+      int weekTaken = 0;
+      for (var doc in weekLogs.docs) {
+        if (doc.get('status') == 'taken') {
+          weekTaken++;
+        }
+      }
+
+      double adherenceRate =
+          weekTotal > 0 ? (weekTaken / weekTotal) * 100 : 0.0;
+
+      // Get user stats
+      DocumentSnapshot userDoc = await _usersCollection.doc(userId).get();
+      int streakDays = 0;
+      int rewardPoints = 0;
+
+      if (userDoc.exists) {
+        streakDays = userDoc.get('streakDays') ?? 0;
+        rewardPoints = userDoc.get('rewardPoints') ?? 0;
+      }
+
+      return {
+        'totalScheduled': totalScheduled,
+        'totalTaken': totalTaken,
+        'totalMissed': totalMissed,
+        'totalPending': totalPending,
+        'adherenceRate': adherenceRate.round(),
+        'activeMedications': activeMeds.docs.length,
+        'streakDays': streakDays,
+        'rewardPoints': rewardPoints,
+      };
+    } catch (e) {
+      throw Exception('Error getting medication stats: $e');
+    }
+  }
+
+  /// Generate medication logs for the day
+  Future<void> generateDailyMedicationLogs(String userId) async {
+    try {
+      DateTime now = DateTime.now();
+      DateTime startOfDay = DateTime(now.year, now.month, now.day);
+      DateTime endOfDay = startOfDay.add(const Duration(days: 1));
+
+      // Get all active medications for the user
+      QuerySnapshot medications = await _medicationsCollection
+          .where('userId', isEqualTo: userId)
+          .where('isActive', isEqualTo: true)
+          .get();
+
+      // Check if logs already exist for today
+      QuerySnapshot existingLogs = await _medicationLogsCollection
+          .where('userId', isEqualTo: userId)
+          .where('scheduledDate', isGreaterThanOrEqualTo: startOfDay)
+          .where('scheduledDate', isLessThan: endOfDay)
+          .get();
+
+      // If logs already exist, don't generate new ones
+      if (existingLogs.docs.isNotEmpty) return;
+
+      // Generate logs for each medication based on frequency
+      for (var medDoc in medications.docs) {
+        Map<String, dynamic> medication = medDoc.data() as Map<String, dynamic>;
+        String medicationId = medDoc.id;
+        String name = medication['name'];
+        String dosage = medication['dosage'];
+        String frequency = medication['frequency'];
+        String timeStr = medication['time'];
+
+        // Parse time
+        List<String> timeParts = timeStr.split(':');
+        int hour = int.parse(timeParts[0]);
+        int minute = int.parse(timeParts[1].split(' ')[0]);
+        String period =
+            timeParts.length > 1 ? timeParts[1].split(' ')[1] : 'AM';
+
+        // Convert to 24-hour format
+        if (period == 'PM' && hour < 12) {
+          hour += 12;
+        } else if (period == 'AM' && hour == 12) {
+          hour = 0;
+        }
+
+        // Create scheduled date for today
+        DateTime scheduledDate =
+            DateTime(now.year, now.month, now.day, hour, minute);
+
+        // If time has passed for today, schedule for tomorrow
+        if (scheduledDate.isBefore(now)) {
+          scheduledDate = scheduledDate.add(const Duration(days: 1));
+        }
+
+        // Create medication log based on frequency
+        if (frequency == 'Daily') {
+          await _medicationLogsCollection.add({
+            'userId': userId,
+            'medicationId': medicationId,
+            'medicationName': name,
+            'dosage': dosage,
+            'scheduledDate': scheduledDate,
+            'status': 'pending',
+            'notes': '',
+            'createdAt': FieldValue.serverTimestamp(),
+          });
+        } else if (frequency == 'Twice Daily') {
+          // Create two logs: one for morning (8 AM) and one for evening (8 PM)
+          DateTime morningDate = DateTime(now.year, now.month, now.day, 8, 0);
+          DateTime eveningDate = DateTime(now.year, now.month, now.day, 20, 0);
+
+          // If times have passed, schedule for tomorrow
+          if (morningDate.isBefore(now)) {
+            morningDate = morningDate.add(const Duration(days: 1));
+          }
+          if (eveningDate.isBefore(now)) {
+            eveningDate = eveningDate.add(const Duration(days: 1));
+          }
+
+          await _medicationLogsCollection.add({
+            'userId': userId,
+            'medicationId': medicationId,
+            'medicationName': name,
+            'dosage': dosage,
+            'scheduledDate': morningDate,
+            'status': 'pending',
+            'notes': '',
+            'createdAt': FieldValue.serverTimestamp(),
+          });
+
+          await _medicationLogsCollection.add({
+            'userId': userId,
+            'medicationId': medicationId,
+            'medicationName': name,
+            'dosage': dosage,
+            'scheduledDate': eveningDate,
+            'status': 'pending',
+            'notes': '',
+            'createdAt': FieldValue.serverTimestamp(),
+          });
+        } else if (frequency == 'Three Times Daily') {
+          // Create three logs: morning (8 AM), afternoon (2 PM), and evening (8 PM)
+          DateTime morningDate = DateTime(now.year, now.month, now.day, 8, 0);
+          DateTime afternoonDate =
+              DateTime(now.year, now.month, now.day, 14, 0);
+          DateTime eveningDate = DateTime(now.year, now.month, now.day, 20, 0);
+
+          // If times have passed, schedule for tomorrow
+          if (morningDate.isBefore(now)) {
+            morningDate = morningDate.add(const Duration(days: 1));
+          }
+          if (afternoonDate.isBefore(now)) {
+            afternoonDate = afternoonDate.add(const Duration(days: 1));
+          }
+          if (eveningDate.isBefore(now)) {
+            eveningDate = eveningDate.add(const Duration(days: 1));
+          }
+
+          await _medicationLogsCollection.add({
+            'userId': userId,
+            'medicationId': medicationId,
+            'medicationName': name,
+            'dosage': dosage,
+            'scheduledDate': morningDate,
+            'status': 'pending',
+            'notes': '',
+            'createdAt': FieldValue.serverTimestamp(),
+          });
+
+          await _medicationLogsCollection.add({
+            'userId': userId,
+            'medicationId': medicationId,
+            'medicationName': name,
+            'dosage': dosage,
+            'scheduledDate': afternoonDate,
+            'status': 'pending',
+            'notes': '',
+            'createdAt': FieldValue.serverTimestamp(),
+          });
+
+          await _medicationLogsCollection.add({
+            'userId': userId,
+            'medicationId': medicationId,
+            'medicationName': name,
+            'dosage': dosage,
+            'scheduledDate': eveningDate,
+            'status': 'pending',
+            'notes': '',
+            'createdAt': FieldValue.serverTimestamp(),
+          });
+        } else if (frequency == 'Weekly') {
+          // Create one log for today
+          await _medicationLogsCollection.add({
+            'userId': userId,
+            'medicationId': medicationId,
+            'medicationName': name,
+            'dosage': dosage,
+            'scheduledDate': scheduledDate,
+            'status': 'pending',
+            'notes': '',
+            'createdAt': FieldValue.serverTimestamp(),
+          });
+        }
+      }
+    } catch (e) {
+      throw Exception('Error generating daily medication logs: $e');
     }
   }
 }
