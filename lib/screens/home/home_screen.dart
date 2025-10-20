@@ -36,15 +36,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ProfileScreen(),
         ],
       ),
-      floatingActionButton: _selectedIndex == 0
-          ? FloatingActionButton.extended(
-              onPressed: () {
-                _showAddMedicationDialog(context);
-              },
-              icon: const Icon(Icons.add),
-              label: const Text('Add Medication'),
-            )
-          : null,
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: (index) {
