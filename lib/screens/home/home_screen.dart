@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../utils/colors.dart';
 import '../../utils/constants.dart';
 import '../../widgets/stat_card.dart';
 import '../../widgets/medication_card.dart';
 import '../profile/profile_screen.dart' show ProfileScreen;
+import '../../services/auth_service.dart';
+import '../../services/firestore_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -71,8 +74,54 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
+
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  final AuthService _authService = AuthService();
+  final FirestoreService _firestoreService = FirestoreService();
+  String _userName = 'User';
+  String? _profilePictureUrl;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    try {
+      final userId = _authService.currentUserId;
+      if (userId != null) {
+        final userData = await _firestoreService.getUser(userId);
+        if (userData != null) {
+          setState(() {
+            _userName = userData['fullName'] ?? 'User';
+            _profilePictureUrl = userData['profilePicture'] ?? '';
+            _isLoading = false;
+          });
+        } else {
+          // Fallback to Firebase Auth display name if Firestore doesn't have the name
+          final user = _authService.currentUser;
+          setState(() {
+            _userName = user?.displayName ?? 'User';
+            _profilePictureUrl = '';
+            _isLoading = false;
+          });
+        }
+      }
+    } catch (e) {
+      print('Error loading user data: $e');
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -84,7 +133,7 @@ class DashboardScreen extends StatelessWidget {
             automaticallyImplyLeading: false,
             floating: true,
             backgroundColor: AppColors.primary,
-            expandedHeight: 120,
+            expandedHeight: 140,
             flexibleSpace: FlexibleSpaceBar(
               background: Container(
                 decoration: const BoxDecoration(
@@ -95,13 +144,43 @@ class DashboardScreen extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.end,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Hello, Maria! 👋',
-                      style: TextStyle(
-                        fontSize: AppConstants.fontXXL,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textWhite,
-                      ),
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 25,
+                          backgroundColor: AppColors.textWhite,
+                          backgroundImage: (_profilePictureUrl != null &&
+                                  _profilePictureUrl!.isNotEmpty)
+                              ? CachedNetworkImageProvider(_profilePictureUrl!)
+                                  as ImageProvider
+                              : null,
+                          child: (_profilePictureUrl == null ||
+                                  _profilePictureUrl!.isEmpty)
+                              ? Icon(Icons.person,
+                                  size: 25, color: AppColors.primary)
+                              : null,
+                        ),
+                        const SizedBox(width: AppConstants.paddingM),
+                        Expanded(
+                          child: _isLoading
+                              ? const Text(
+                                  'Hello! 👋',
+                                  style: TextStyle(
+                                    fontSize: AppConstants.fontXXL,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.textWhite,
+                                  ),
+                                )
+                              : Text(
+                                  'Hello, ${_userName.split(' ')[0]}! 👋',
+                                  style: const TextStyle(
+                                    fontSize: AppConstants.fontXXL,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.textWhite,
+                                  ),
+                                ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: AppConstants.paddingXS),
                     Text(

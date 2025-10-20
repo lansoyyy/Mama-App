@@ -3,9 +3,44 @@ import '../../utils/colors.dart';
 import '../../utils/constants.dart';
 import '../../widgets/custom_card.dart';
 import '../../services/auth_service.dart';
+import '../../services/firestore_service.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  final AuthService _authService = AuthService();
+  final FirestoreService _firestoreService = FirestoreService();
+  Map<String, dynamic>? _userData;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    try {
+      final userId = _authService.currentUserId;
+      if (userId != null) {
+        final userData = await _firestoreService.getUser(userId);
+        setState(() {
+          _userData = userData;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Error loading user data: $e');
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -19,20 +54,32 @@ class ProfileScreen extends StatelessWidget {
               gradient: AppColors.primaryGradient,
               child: Column(
                 children: [
-                  const CircleAvatar(
+                  CircleAvatar(
                     radius: 50,
                     backgroundColor: AppColors.textWhite,
-                    child:
-                        Icon(Icons.person, size: 50, color: AppColors.primary),
+                    backgroundImage: (_userData?['profilePicture'] != null &&
+                            _userData!['profilePicture'].toString().isNotEmpty)
+                        ? NetworkImage(_userData!['profilePicture'].toString())
+                            as ImageProvider
+                        : null,
+                    child: (_userData?['profilePicture'] == null ||
+                            _userData!['profilePicture'].toString().isEmpty)
+                        ? Icon(Icons.person, size: 50, color: AppColors.primary)
+                        : null,
                   ),
                   const SizedBox(height: AppConstants.paddingM),
-                  const Text('Maria Santos',
-                      style: TextStyle(
-                          fontSize: AppConstants.fontXXL,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textWhite)),
-                  const Text('maria.santos@email.com',
-                      style: TextStyle(
+                  _isLoading
+                      ? const CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                              AppColors.textWhite))
+                      : Text(_userData?['fullName'] ?? 'User',
+                          style: const TextStyle(
+                              fontSize: AppConstants.fontXXL,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textWhite)),
+                  const SizedBox(height: AppConstants.paddingS),
+                  Text(_authService.currentUser?.email ?? 'user@example.com',
+                      style: const TextStyle(
                           fontSize: AppConstants.fontM,
                           color: AppColors.textWhite)),
                   const SizedBox(height: AppConstants.paddingM),
@@ -125,7 +172,7 @@ class ProfileScreen extends StatelessWidget {
 
   static void _showLogoutDialog(BuildContext context) {
     final AuthService authService = AuthService();
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -139,7 +186,7 @@ class ProfileScreen extends StatelessWidget {
           TextButton(
             onPressed: () async {
               Navigator.pop(context);
-              
+
               // Show loading indicator
               showDialog(
                 context: context,
@@ -148,20 +195,22 @@ class ProfileScreen extends StatelessWidget {
                   child: CircularProgressIndicator(),
                 ),
               );
-              
+
               try {
                 // Sign out from Firebase
                 await authService.signOut();
-                
+
                 if (context.mounted) {
                   // Close loading indicator
                   Navigator.pop(context);
-                  
+
                   // Navigate to login screen
                   Navigator.pushNamedAndRemoveUntil(
-                    context, '/login', (route) => false,
+                    context,
+                    '/login',
+                    (route) => false,
                   );
-                  
+
                   // Show success message
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
@@ -174,7 +223,7 @@ class ProfileScreen extends StatelessWidget {
                 if (context.mounted) {
                   // Close loading indicator
                   Navigator.pop(context);
-                  
+
                   // Show error message
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
