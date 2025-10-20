@@ -1,73 +1,73 @@
 import 'package:flutter/material.dart';
 
-/// App color palette inspired by maternal care and warmth
+/// App color palette with custom purple and warm beige shades
 class AppColors {
-  // Primary Colors - Soft pink/rose tones for maternal warmth
-  static const Color primary = Color(0xFFFF6B9D); // Warm pink
-  static const Color primaryLight = Color(0xFFFFB3D9);
-  static const Color primaryDark = Color(0xFFE91E63);
-  
-  // Secondary Colors - Calming purple/lavender
-  static const Color secondary = Color(0xFF9C27B0);
-  static const Color secondaryLight = Color(0xFFE1BEE7);
-  static const Color secondaryDark = Color(0xFF7B1FA2);
-  
-  // Accent Colors
-  static const Color accent = Color(0xFFFF4081);
-  static const Color accentLight = Color(0xFFFF80AB);
-  
-  // Background Colors
-  static const Color background = Color(0xFFFFF5F7);
+  // Primary Colors - Custom warm beige and purple combination
+  static const Color primary = Color(0xFFC4799A); // Custom Purple
+  static const Color primaryLight = Color(0xFFD8A8C0); // Lighter Purple
+  static const Color primaryDark = Color(0xFFA55A7A); // Darker Purple
+
+  // Secondary Colors - Complementary shades
+  static const Color secondary = Color(0xFFFAEDE5); // Warm Beige
+  static const Color secondaryLight = Color(0xFFFFF3ED); // Lighter Beige
+  static const Color secondaryDark = Color(0xFFF0DCC7); // Darker Beige
+
+  // Accent Colors - Additional purple and beige variations
+  static const Color accent = Color(0xFFD8A8C0); // Light Purple
+  static const Color accentLight = Color(0xFFD1B8C1); // Soft Purple-Beige
+
+  // Background Colors - Warm and soft backgrounds
+  static const Color background = Color(0xFFFAEDE5); // Primary background
   static const Color cardBackground = Colors.white;
-  static const Color surfaceLight = Color(0xFFFFF0F3);
-  
+  static const Color surfaceLight = Color(0xFFFFF8F3); // Light surface
+
   // Text Colors
   static const Color textPrimary = Color(0xFF2D2D2D);
   static const Color textSecondary = Color(0xFF757575);
   static const Color textLight = Color(0xFFBDBDBD);
   static const Color textWhite = Colors.white;
-  
-  // Status Colors
-  static const Color success = Color(0xFF4CAF50);
-  static const Color warning = Color(0xFFFF9800);
-  static const Color error = Color(0xFFF44336);
-  static const Color info = Color(0xFF2196F3);
-  
+
+  // Status Colors - Purple and beige-tinted status colors
+  static const Color success = Color(0xFFA8D8A8); // Soft Green
+  static const Color warning = Color(0xFFD8B86B); // Warm Yellow
+  static const Color error = Color(0xFFD87070); // Soft Red
+  static const Color info = Color(0xFF8A9BC8); // Soft Blue
+
   // Medication Status Colors
-  static const Color taken = Color(0xFF66BB6A);
-  static const Color missed = Color(0xFFEF5350);
-  static const Color pending = Color(0xFFFFB74D);
+  static const Color taken = Color(0xFFA8D8A8); // Soft Green
+  static const Color missed = Color(0xFFD87070); // Soft Red
+  static const Color pending = Color(0xFFD8B86B); // Warm Yellow
   static const Color skipped = Color(0xFF9E9E9E);
-  
-  // Feature-specific Colors
-  static const Color aiAssistant = Color(0xFF7C4DFF);
-  static const Color consultation = Color(0xFF26C6DA);
-  static const Color emergency = Color(0xFFE53935);
-  static const Color reward = Color(0xFFFFD54F);
-  
-  // Gradient Colors
+
+  // Feature-specific Colors - Various purple and beige shades
+  static const Color aiAssistant = Color(0xFFC4799A); // Primary Purple
+  static const Color consultation = Color(0xFFA890B8); // Soft Purple
+  static const Color emergency = Color(0xFFD87070); // Soft Red
+  static const Color reward = Color(0xFFD8B86B); // Warm Yellow
+
+  // Gradient Colors - Purple and beige gradients
   static const LinearGradient primaryGradient = LinearGradient(
-    colors: [Color(0xFFFF6B9D), Color(0xFFFF4081)],
+    colors: [Color(0xFFC4799A), Color(0xFFD8A8C0)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
-  
+
   static const LinearGradient secondaryGradient = LinearGradient(
-    colors: [Color(0xFF9C27B0), Color(0xFF7B1FA2)],
+    colors: [Color(0xFFFAEDE5), Color(0xFFF0DCC7)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
-  
+
   static const LinearGradient softGradient = LinearGradient(
-    colors: [Color(0xFFFFF5F7), Color(0xFFFFE4E9)],
+    colors: [Color(0xFFFAEDE5), Color(0xFFFFF8F3)],
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
   );
-  
-  // Shadow Colors
-  static const Color shadowLight = Color(0x1AFF6B9D);
-  static const Color shadowMedium = Color(0x33FF6B9D);
-  
+
+  // Shadow Colors - Purple-tinted shadows
+  static const Color shadowLight = Color(0x1AC4799A);
+  static const Color shadowMedium = Color(0x33C4799A);
+
   // Divider and Border Colors
   static const Color divider = Color(0xFFEEEEEE);
   static const Color border = Color(0xFFE0E0E0);

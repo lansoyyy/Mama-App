@@ -81,6 +81,7 @@ class DashboardScreen extends StatelessWidget {
         slivers: [
           // App Bar
           SliverAppBar(
+            automaticallyImplyLeading: false,
             floating: true,
             backgroundColor: AppColors.primary,
             expandedHeight: 120,
@@ -447,7 +448,8 @@ void _showAddMedicationDialog(BuildContext context) {
         ),
         ElevatedButton(
           onPressed: () {
-            if (nameController.text.isNotEmpty && dosageController.text.isNotEmpty) {
+            if (nameController.text.isNotEmpty &&
+                dosageController.text.isNotEmpty) {
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -482,16 +484,6 @@ class MedicationsScreen extends StatelessWidget {
         title: const Text('My Medications'),
         backgroundColor: AppColors.primary,
         foregroundColor: AppColors.textWhite,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Search feature coming soon')),
-              );
-            },
-          ),
-        ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(AppConstants.paddingM),
@@ -519,7 +511,7 @@ class MedicationsScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppConstants.paddingL),
-          
+
           // Medications List
           const Text(
             'All Medications',
@@ -529,7 +521,7 @@ class MedicationsScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppConstants.paddingM),
-          
+
           MedicationCard(
             medicationName: 'Prenatal Vitamins',
             dosage: '1 tablet',
@@ -612,112 +604,119 @@ class FeaturesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final features = [
+      {
+        'title': 'MedInfo Hub',
+        'description': 'Learn about your medications',
+        'icon': Icons.medical_services,
+        'color': AppColors.primary,
+        'route': '/medinfo-hub',
+      },
+      {
+        'title': 'Smart MedGuide',
+        'description': 'Track your medication adherence',
+        'icon': Icons.medication,
+        'color': AppColors.secondary,
+        'route': '/smart-medguide',
+      },
+      {
+        'title': 'AI Health Assistant',
+        'description': 'Get personalized health guidance',
+        'icon': Icons.psychology,
+        'color': AppColors.aiAssistant,
+        'route': '/ai-assistant',
+      },
+      {
+        'title': 'Virtual Consultation',
+        'description': 'Connect with health professionals',
+        'icon': Icons.video_call,
+        'color': AppColors.consultation,
+        'route': '/consultation',
+      },
+      {
+        'title': 'Rewards & Achievements',
+        'description': 'Track your progress and earn rewards',
+        'icon': Icons.stars,
+        'color': AppColors.reward,
+        'route': '/rewards',
+      },
+      {
+        'title': 'Symptom Tracker',
+        'description': 'Log and monitor your symptoms',
+        'icon': Icons.health_and_safety,
+        'color': AppColors.info,
+        'route': '/symptom-tracker',
+      },
+      {
+        'title': 'Health Journal',
+        'description': 'Keep a daily health diary',
+        'icon': Icons.book,
+        'color': AppColors.success,
+        'route': '/health-journal',
+      },
+      {
+        'title': 'Find Pharmacy',
+        'description': 'Locate nearby pharmacies',
+        'icon': Icons.local_pharmacy,
+        'color': AppColors.info,
+        'route': '/pharmacy-locator',
+      },
+      {
+        'title': 'Emergency Help',
+        'description': 'Quick access to emergency services',
+        'icon': Icons.emergency,
+        'color': AppColors.emergency,
+        'route': '/emergency',
+      },
+      {
+        'title': 'Family Management',
+        'description': 'Manage medications for family members',
+        'icon': Icons.family_restroom,
+        'color': AppColors.secondary,
+        'route': '/multi-user',
+      },
+      {
+        'title': 'Health Records',
+        'description': 'Store and manage health documents',
+        'icon': Icons.folder_shared,
+        'color': AppColors.warning,
+        'route': '/health-records',
+      },
+      {
+        'title': 'Milestone Tracker',
+        'description': 'Track maternal and baby milestones',
+        'icon': Icons.child_care,
+        'color': AppColors.success,
+        'route': '/milestone-tracker',
+      },
+    ];
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('All Features'),
         backgroundColor: AppColors.primary,
         foregroundColor: AppColors.textWhite,
       ),
-      body: ListView(
+      body: Padding(
         padding: const EdgeInsets.all(AppConstants.paddingM),
-        children: [
-          _buildFeatureItem(
-            context,
-            'MedInfo Hub',
-            'Learn about your medications',
-            Icons.medical_services,
-            AppColors.primary,
-            '/medinfo-hub',
+        child: GridView.builder(
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            childAspectRatio: 0.85,
           ),
-          _buildFeatureItem(
-            context,
-            'Smart MedGuide',
-            'Track your medication adherence',
-            Icons.medication,
-            AppColors.secondary,
-            '/smart-medguide',
-          ),
-          _buildFeatureItem(
-            context,
-            'AI Health Assistant',
-            'Get personalized health guidance',
-            Icons.psychology,
-            AppColors.aiAssistant,
-            '/ai-assistant',
-          ),
-          _buildFeatureItem(
-            context,
-            'Virtual Consultation',
-            'Connect with health professionals',
-            Icons.video_call,
-            AppColors.consultation,
-            '/consultation',
-          ),
-          _buildFeatureItem(
-            context,
-            'Rewards & Achievements',
-            'Track your progress and earn rewards',
-            Icons.stars,
-            AppColors.reward,
-            '/rewards',
-          ),
-          _buildFeatureItem(
-            context,
-            'Symptom Tracker',
-            'Log and monitor your symptoms',
-            Icons.health_and_safety,
-            AppColors.info,
-            '/symptom-tracker',
-          ),
-          _buildFeatureItem(
-            context,
-            'Health Journal',
-            'Keep a daily health diary',
-            Icons.book,
-            AppColors.success,
-            '/health-journal',
-          ),
-          _buildFeatureItem(
-            context,
-            'Find Pharmacy',
-            'Locate nearby pharmacies',
-            Icons.local_pharmacy,
-            AppColors.info,
-            '/pharmacy-locator',
-          ),
-          _buildFeatureItem(
-            context,
-            'Emergency Help',
-            'Quick access to emergency services',
-            Icons.emergency,
-            AppColors.emergency,
-            '/emergency',
-          ),
-          _buildFeatureItem(
-            context,
-            'Family Management',
-            'Manage medications for family members',
-            Icons.family_restroom,
-            AppColors.secondary,
-            '/multi-user',
-          ),
-          _buildFeatureItem(
-            context,
-            'Health Records',
-            'Store and manage health documents',
-            Icons.folder_shared,
-            AppColors.warning,
-            '/health-records',
-          ),
-          _buildFeatureItem(
-            context,
-            'Milestone Tracker',
-            'Track maternal and baby milestones',
-            Icons.child_care,
-            AppColors.success,
-            '/milestone-tracker',
-          ),
-        ],
+          itemCount: features.length,
+          itemBuilder: (context, index) {
+            final feature = features[index];
+            return _buildFeatureItem(
+              context,
+              feature['title'] as String,
+              feature['description'] as String,
+              feature['icon'] as IconData,
+              feature['color'] as Color,
+              feature['route'] as String,
+            );
+          },
+        ),
       ),
     );
   }
@@ -731,30 +730,73 @@ class FeaturesScreen extends StatelessWidget {
     String route,
   ) {
     return Card(
-      margin: const EdgeInsets.only(bottom: AppConstants.paddingM),
       elevation: AppConstants.elevationS,
-      child: ListTile(
-        leading: Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(AppConstants.radiusM),
-          ),
-          child: Icon(icon, color: color),
-        ),
-        title: Text(
-          title,
-          style: const TextStyle(
-            fontSize: AppConstants.fontL,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        subtitle: Text(description),
-        trailing: const Icon(Icons.arrow_forward_ios, size: AppConstants.iconS),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppConstants.radiusM),
+      ),
+      child: InkWell(
         onTap: () {
           Navigator.pushNamed(context, route);
         },
+        borderRadius: BorderRadius.circular(AppConstants.radiusM),
+        child: Container(
+          padding: const EdgeInsets.all(AppConstants.paddingM),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                color.withOpacity(0.05),
+                color.withOpacity(0.02),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(AppConstants.radiusM),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(AppConstants.radiusM),
+                ),
+                child: Icon(icon, color: color, size: AppConstants.iconL),
+              ),
+              const SizedBox(height: AppConstants.paddingM),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: AppConstants.fontL,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: AppConstants.paddingXS),
+              Text(
+                description,
+                style: const TextStyle(
+                  fontSize: AppConstants.fontS,
+                  color: AppColors.textSecondary,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const Spacer(),
+              Align(
+                alignment: Alignment.bottomRight,
+                child: Icon(
+                  Icons.arrow_forward_ios,
+                  size: AppConstants.iconS,
+                  color: color,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

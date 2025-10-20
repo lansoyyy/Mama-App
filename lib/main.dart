@@ -55,7 +55,7 @@ class MamaApp extends StatelessWidget {
       theme: AppTheme.lightTheme,
 
       // Initial route - AuthWrapper handles auto-login
-      initialRoute: '/',
+      initialRoute: '/home',
 
       // Routes
       routes: {

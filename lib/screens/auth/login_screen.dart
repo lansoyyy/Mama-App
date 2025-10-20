@@ -95,22 +95,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: AppConstants.paddingXL),
 
                 // Logo
-                Center(
-                  child: Container(
-                    width: 100,
-                    height: 100,
-                    decoration: BoxDecoration(
-                      gradient: AppColors.primaryGradient,
-                      borderRadius: BorderRadius.circular(AppConstants.radiusL),
-                    ),
-                    child: const Icon(
-                      Icons.favorite,
-                      size: AppConstants.iconXXL,
-                      color: AppColors.textWhite,
-                    ),
-                  ),
+                Image.asset(
+                  'assets/images/logo.png',
+                  height: 300,
                 ),
-                const SizedBox(height: AppConstants.paddingL),
 
                 // Welcome Text
                 const Text(
