@@ -311,6 +311,15 @@ class FirestoreService {
         .snapshots();
   }
 
+  /// Delete health record
+  Future<void> deleteHealthRecord(String recordId) async {
+    try {
+      await _healthRecordsCollection.doc(recordId).delete();
+    } catch (e) {
+      throw Exception('Error deleting health record: $e');
+    }
+  }
+
   /// Check if email exists
   Future<bool> emailExists(String email) async {
     try {
@@ -1460,6 +1469,164 @@ class FirestoreService {
       return null;
     } catch (e) {
       throw Exception('Error getting primary user: $e');
+    }
+  }
+
+  /// Get user's postpartum recovery progress
+  Future<Map<String, dynamic>> getPostpartumProgress(String userId) async {
+    try {
+      DocumentSnapshot userDoc = await _usersCollection.doc(userId).get();
+      if (!userDoc.exists) {
+        return {
+          'deliveryDate': null,
+          'weeksPassed': 0,
+          'recoveryProgress': 0.0,
+          'isCompleted': false,
+        };
+      }
+
+      Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>;
+      Timestamp? deliveryDateTimestamp = userData['deliveryDate'];
+
+      if (deliveryDateTimestamp == null) {
+        return {
+          'deliveryDate': null,
+          'weeksPassed': 0,
+          'recoveryProgress': 0.0,
+          'isCompleted': false,
+        };
+      }
+
+      DateTime deliveryDate = deliveryDateTimestamp.toDate();
+      DateTime now = DateTime.now();
+      Duration difference = now.difference(deliveryDate);
+      int weeksPassed = (difference.inDays / 7).floor();
+
+      // 6 weeks = 42 days for full recovery
+      double recoveryProgress =
+          (difference.inDays / 42 * 100).clamp(0.0, 100.0);
+      bool isCompleted = weeksPassed >= 6;
+
+      return {
+        'deliveryDate': deliveryDate,
+        'weeksPassed': weeksPassed,
+        'recoveryProgress': recoveryProgress,
+        'isCompleted': isCompleted,
+      };
+    } catch (e) {
+      throw Exception('Error getting postpartum progress: $e');
+    }
+  }
+
+  /// Update user's delivery date
+  Future<void> updateDeliveryDate(String userId, DateTime deliveryDate) async {
+    try {
+      await _usersCollection.doc(userId).update({
+        'deliveryDate': deliveryDate,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      throw Exception('Error updating delivery date: $e');
+    }
+  }
+
+  /// Get user's vaccination records
+  Future<Map<String, dynamic>> getVaccinationProgress(String userId) async {
+    try {
+      QuerySnapshot vaccinationRecords = await _healthRecordsCollection
+          .where('userId', isEqualTo: userId)
+          .where('type', isEqualTo: 'Vaccination')
+          .get();
+
+      int completedVaccinations = vaccinationRecords.docs.length;
+      int totalVaccinations = 8; // Standard vaccination schedule
+
+      double progress =
+          (completedVaccinations / totalVaccinations * 100).clamp(0.0, 100.0);
+      bool isCompleted = completedVaccinations >= totalVaccinations;
+
+      return {
+        'completedVaccinations': completedVaccinations,
+        'totalVaccinations': totalVaccinations,
+        'progress': progress,
+        'isCompleted': isCompleted,
+      };
+    } catch (e) {
+      throw Exception('Error getting vaccination progress: $e');
+    }
+  }
+
+  /// Get user's weight tracking progress
+  Future<Map<String, dynamic>> getWeightTrackingProgress(String userId) async {
+    try {
+      DateTime thirtyDaysAgo =
+          DateTime.now().subtract(const Duration(days: 30));
+
+      QuerySnapshot healthRecords = await _healthRecordsCollection
+          .where('userId', isEqualTo: userId)
+          .where('type', isEqualTo: 'Weight')
+          .where('date', isGreaterThanOrEqualTo: thirtyDaysAgo)
+          .get();
+
+      int weightEntries = healthRecords.docs.length;
+      int targetEntries = 4; // Weekly tracking for a month
+
+      double progress = (weightEntries / targetEntries * 100).clamp(0.0, 100.0);
+      bool isCompleted = weightEntries >= targetEntries;
+
+      return {
+        'weightEntries': weightEntries,
+        'targetEntries': targetEntries,
+        'progress': progress,
+        'isCompleted': isCompleted,
+      };
+    } catch (e) {
+      throw Exception('Error getting weight tracking progress: $e');
+    }
+  }
+
+  /// Get user's health journal progress
+  Future<Map<String, dynamic>> getJournalProgress(
+      String userId, int targetCount) async {
+    try {
+      QuerySnapshot journalEntries = await _healthJournalCollection
+          .where('userId', isEqualTo: userId)
+          .get();
+
+      int entryCount = journalEntries.docs.length;
+      double progress = (entryCount / targetCount * 100).clamp(0.0, 100.0);
+      bool isCompleted = entryCount >= targetCount;
+
+      return {
+        'entryCount': entryCount,
+        'targetCount': targetCount,
+        'progress': progress,
+        'isCompleted': isCompleted,
+      };
+    } catch (e) {
+      throw Exception('Error getting journal progress: $e');
+    }
+  }
+
+  /// Get user's symptom tracking progress
+  Future<Map<String, dynamic>> getSymptomProgress(
+      String userId, int targetCount) async {
+    try {
+      QuerySnapshot symptomLogs =
+          await _symptomLogsCollection.where('userId', isEqualTo: userId).get();
+
+      int logCount = symptomLogs.docs.length;
+      double progress = (logCount / targetCount * 100).clamp(0.0, 100.0);
+      bool isCompleted = logCount >= targetCount;
+
+      return {
+        'logCount': logCount,
+        'targetCount': targetCount,
+        'progress': progress,
+        'isCompleted': isCompleted,
+      };
+    } catch (e) {
+      throw Exception('Error getting symptom progress: $e');
     }
   }
 }
