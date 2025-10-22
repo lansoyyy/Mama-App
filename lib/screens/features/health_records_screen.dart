@@ -11,7 +11,8 @@ class HealthRecordsScreen extends StatefulWidget {
   State<HealthRecordsScreen> createState() => _HealthRecordsScreenState();
 }
 
-class _HealthRecordsScreenState extends State<HealthRecordsScreen> with SingleTickerProviderStateMixin {
+class _HealthRecordsScreenState extends State<HealthRecordsScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   @override
@@ -32,9 +33,14 @@ class _HealthRecordsScreenState extends State<HealthRecordsScreen> with SingleTi
       appBar: CustomAppBar(
         title: 'Health Records',
         bottom: TabBar(
+          labelColor: Colors.white,
           controller: _tabController,
           indicatorColor: AppColors.textWhite,
-          tabs: const [Tab(text: 'Prescriptions'), Tab(text: 'Lab Results'), Tab(text: 'Vaccinations')],
+          tabs: const [
+            Tab(text: 'Prescriptions'),
+            Tab(text: 'Lab Results'),
+            Tab(text: 'Vaccinations')
+          ],
         ),
       ),
       body: TabBarView(
@@ -48,7 +54,8 @@ class _HealthRecordsScreenState extends State<HealthRecordsScreen> with SingleTi
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Upload document feature coming soon')),
+            const SnackBar(
+                content: Text('Upload document feature coming soon')),
           );
         },
         child: const Icon(Icons.add),
@@ -60,9 +67,12 @@ class _HealthRecordsScreenState extends State<HealthRecordsScreen> with SingleTi
     return ListView(
       padding: const EdgeInsets.all(AppConstants.paddingM),
       children: [
-        _buildRecordCard('Prenatal Vitamins', 'Dr. Maria Santos', 'Jan 15, 2025', Icons.medication, AppColors.primary),
-        _buildRecordCard('Iron Supplement', 'Dr. Juan Reyes', 'Jan 10, 2025', Icons.medication, AppColors.error),
-        _buildRecordCard('Folic Acid', 'Dr. Maria Santos', 'Jan 5, 2025', Icons.medication, AppColors.secondary),
+        _buildRecordCard('Prenatal Vitamins', 'Dr. Maria Santos',
+            'Jan 15, 2025', Icons.medication, AppColors.primary),
+        _buildRecordCard('Iron Supplement', 'Dr. Juan Reyes', 'Jan 10, 2025',
+            Icons.medication, AppColors.error),
+        _buildRecordCard('Folic Acid', 'Dr. Maria Santos', 'Jan 5, 2025',
+            Icons.medication, AppColors.secondary),
       ],
     );
   }
@@ -71,8 +81,10 @@ class _HealthRecordsScreenState extends State<HealthRecordsScreen> with SingleTi
     return ListView(
       padding: const EdgeInsets.all(AppConstants.paddingM),
       children: [
-        _buildRecordCard('Blood Test', 'City Hospital', 'Jan 20, 2025', Icons.biotech, AppColors.info),
-        _buildRecordCard('Ultrasound', 'Maternal Clinic', 'Jan 12, 2025', Icons.monitor_heart, AppColors.success),
+        _buildRecordCard('Blood Test', 'City Hospital', 'Jan 20, 2025',
+            Icons.biotech, AppColors.info),
+        _buildRecordCard('Ultrasound', 'Maternal Clinic', 'Jan 12, 2025',
+            Icons.monitor_heart, AppColors.success),
       ],
     );
   }
@@ -81,13 +93,16 @@ class _HealthRecordsScreenState extends State<HealthRecordsScreen> with SingleTi
     return ListView(
       padding: const EdgeInsets.all(AppConstants.paddingM),
       children: [
-        _buildRecordCard('Tetanus Vaccine', 'Health Center', 'Dec 15, 2024', Icons.vaccines, AppColors.warning),
-        _buildRecordCard('Flu Shot', 'Health Center', 'Nov 20, 2024', Icons.vaccines, AppColors.info),
+        _buildRecordCard('Tetanus Vaccine', 'Health Center', 'Dec 15, 2024',
+            Icons.vaccines, AppColors.warning),
+        _buildRecordCard('Flu Shot', 'Health Center', 'Nov 20, 2024',
+            Icons.vaccines, AppColors.info),
       ],
     );
   }
 
-  Widget _buildRecordCard(String title, String provider, String date, IconData icon, Color color) {
+  Widget _buildRecordCard(
+      String title, String provider, String date, IconData icon, Color color) {
     return CustomCard(
       margin: const EdgeInsets.only(bottom: AppConstants.paddingM),
       onTap: () {
@@ -100,7 +115,9 @@ class _HealthRecordsScreenState extends State<HealthRecordsScreen> with SingleTi
           Container(
             width: 50,
             height: 50,
-            decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(AppConstants.radiusM)),
+            decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(AppConstants.radiusM)),
             child: Icon(icon, color: color),
           ),
           const SizedBox(width: AppConstants.paddingM),
@@ -108,9 +125,18 @@ class _HealthRecordsScreenState extends State<HealthRecordsScreen> with SingleTi
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontSize: AppConstants.fontL, fontWeight: FontWeight.w600)),
-                Text(provider, style: const TextStyle(fontSize: AppConstants.fontS, color: AppColors.textSecondary)),
-                Text(date, style: const TextStyle(fontSize: AppConstants.fontS, color: AppColors.textLight)),
+                Text(title,
+                    style: const TextStyle(
+                        fontSize: AppConstants.fontL,
+                        fontWeight: FontWeight.w600)),
+                Text(provider,
+                    style: const TextStyle(
+                        fontSize: AppConstants.fontS,
+                        color: AppColors.textSecondary)),
+                Text(date,
+                    style: const TextStyle(
+                        fontSize: AppConstants.fontS,
+                        color: AppColors.textLight)),
               ],
             ),
           ),

@@ -298,20 +298,6 @@ class _PharmacyLocatorScreenState extends State<PharmacyLocatorScreen> {
                             color: AppColors.textPrimary,
                           ),
                         ),
-                        const SizedBox(width: AppConstants.paddingS),
-                        const Icon(
-                          Icons.location_on,
-                          size: AppConstants.iconS,
-                          color: AppColors.textSecondary,
-                        ),
-                        const SizedBox(width: AppConstants.paddingXS),
-                        Text(
-                          pharmacy.distance,
-                          style: const TextStyle(
-                            fontSize: AppConstants.fontS,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
                       ],
                     ),
                   ],

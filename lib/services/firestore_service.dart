@@ -27,6 +27,8 @@ class FirestoreService {
       _firestore.collection('symptom_logs');
   CollectionReference get _healthJournalCollection =>
       _firestore.collection('health_journal');
+  CollectionReference get _familyMembersCollection =>
+      _firestore.collection('family_members');
 
   /// Create user document
   Future<void> createUser({
@@ -1345,6 +1347,119 @@ class FirestoreService {
       };
     } catch (e) {
       throw Exception('Error getting health journal stats: $e');
+    }
+  }
+
+  /// Add family member
+  Future<String> addFamilyMember({
+    required String userId,
+    required String name,
+    required String relationship,
+    required String info,
+    String? profilePicture,
+    bool isPrimary = false,
+  }) async {
+    try {
+      DocumentReference doc = await _familyMembersCollection.add({
+        'userId': userId,
+        'name': name,
+        'relationship': relationship,
+        'info': info,
+        'profilePicture': profilePicture ?? '',
+        'isPrimary': isPrimary,
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      return doc.id;
+    } catch (e) {
+      throw Exception('Error adding family member: $e');
+    }
+  }
+
+  /// Get family members for a user
+  Stream<QuerySnapshot> getFamilyMembers(String userId) {
+    return _familyMembersCollection
+        .where('userId', isEqualTo: userId)
+        .orderBy('isPrimary', descending: true)
+        .orderBy('createdAt')
+        .snapshots();
+  }
+
+  /// Get family member by ID
+  Future<Map<String, dynamic>?> getFamilyMember(String memberId) async {
+    try {
+      DocumentSnapshot doc = await _familyMembersCollection.doc(memberId).get();
+      if (doc.exists) {
+        return doc.data() as Map<String, dynamic>?;
+      }
+      return null;
+    } catch (e) {
+      throw Exception('Error getting family member: $e');
+    }
+  }
+
+  /// Update family member
+  Future<void> updateFamilyMember({
+    required String memberId,
+    String? name,
+    String? relationship,
+    String? info,
+    String? profilePicture,
+    bool? isPrimary,
+  }) async {
+    try {
+      Map<String, dynamic> updates = {};
+
+      if (name != null) updates['name'] = name;
+      if (relationship != null) updates['relationship'] = relationship;
+      if (info != null) updates['info'] = info;
+      if (profilePicture != null) updates['profilePicture'] = profilePicture;
+      if (isPrimary != null) updates['isPrimary'] = isPrimary;
+
+      updates['updatedAt'] = FieldValue.serverTimestamp();
+
+      await _familyMembersCollection.doc(memberId).update(updates);
+    } catch (e) {
+      throw Exception('Error updating family member: $e');
+    }
+  }
+
+  /// Delete family member
+  Future<void> deleteFamilyMember(String memberId) async {
+    try {
+      await _familyMembersCollection.doc(memberId).delete();
+    } catch (e) {
+      throw Exception('Error deleting family member: $e');
+    }
+  }
+
+  /// Get primary user for a family member
+  Future<Map<String, dynamic>?> getPrimaryUser(String userId) async {
+    try {
+      // First check if the user is primary
+      DocumentSnapshot userDoc = await _usersCollection.doc(userId).get();
+      if (userDoc.exists) {
+        return userDoc.data() as Map<String, dynamic>?;
+      }
+
+      // If not, check if they are a family member
+      QuerySnapshot familyMemberQuery = await _familyMembersCollection
+          .where('userId', isEqualTo: userId)
+          .limit(1)
+          .get();
+
+      if (familyMemberQuery.docs.isNotEmpty) {
+        String primaryUserId = familyMemberQuery.docs.first.get('userId');
+        DocumentSnapshot primaryUserDoc =
+            await _usersCollection.doc(primaryUserId).get();
+        if (primaryUserDoc.exists) {
+          return primaryUserDoc.data() as Map<String, dynamic>?;
+        }
+      }
+
+      return null;
+    } catch (e) {
+      throw Exception('Error getting primary user: $e');
     }
   }
 }
