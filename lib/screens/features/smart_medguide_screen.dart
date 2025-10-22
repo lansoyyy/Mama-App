@@ -291,6 +291,9 @@ class _SmartMedGuideScreenState extends State<SmartMedGuideScreen>
                                 logId: logId,
                                 status: 'taken',
                               );
+                              // Check for new achievements
+                              await _firestoreService
+                                  .checkAndAwardAchievements(userId);
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content:

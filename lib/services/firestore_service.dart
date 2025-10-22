@@ -15,6 +15,16 @@ class FirestoreService {
       _firestore.collection('health_records');
   CollectionReference get _appointmentsCollection =>
       _firestore.collection('appointments');
+  CollectionReference get _rewardsCollection =>
+      _firestore.collection('rewards');
+  CollectionReference get _userRewardsCollection =>
+      _firestore.collection('user_rewards');
+  CollectionReference get _achievementsCollection =>
+      _firestore.collection('achievements');
+  CollectionReference get _userAchievementsCollection =>
+      _firestore.collection('user_achievements');
+  CollectionReference get _symptomLogsCollection =>
+      _firestore.collection('symptom_logs');
 
   /// Create user document
   Future<void> createUser({
@@ -810,6 +820,343 @@ class FirestoreService {
       return null;
     } catch (e) {
       throw Exception('Error getting appointment: $e');
+    }
+  }
+
+  /// Get all available rewards
+  Stream<QuerySnapshot> getAvailableRewards() {
+    return _rewardsCollection
+        .where('isActive', isEqualTo: true)
+        .orderBy('pointsRequired')
+        .snapshots();
+  }
+
+  /// Get user's redeemed rewards
+  Stream<QuerySnapshot> getUserRewards(String userId) {
+    return _userRewardsCollection
+        .where('userId', isEqualTo: userId)
+        .orderBy('redeemedAt', descending: true)
+        .snapshots();
+  }
+
+  /// Redeem a reward
+  Future<void> redeemReward({
+    required String userId,
+    required String rewardId,
+    required int pointsRequired,
+  }) async {
+    try {
+      // Get user current points
+      DocumentSnapshot userDoc = await _usersCollection.doc(userId).get();
+      if (!userDoc.exists) {
+        throw Exception('User not found');
+      }
+
+      int currentPoints = userDoc.get('rewardPoints') ?? 0;
+
+      if (currentPoints < pointsRequired) {
+        throw Exception('Insufficient points');
+      }
+
+      // Deduct points
+      await _usersCollection.doc(userId).update({
+        'rewardPoints': currentPoints - pointsRequired,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      // Add to user rewards
+      await _userRewardsCollection.add({
+        'userId': userId,
+        'rewardId': rewardId,
+        'pointsUsed': pointsRequired,
+        'redeemedAt': FieldValue.serverTimestamp(),
+        'status': 'redeemed',
+      });
+    } catch (e) {
+      throw Exception('Error redeeming reward: $e');
+    }
+  }
+
+  /// Get all available achievements
+  Stream<QuerySnapshot> getAvailableAchievements() {
+    return _achievementsCollection
+        .where('isActive', isEqualTo: true)
+        .orderBy('pointsAwarded', descending: true)
+        .snapshots();
+  }
+
+  /// Get user's achievements
+  Stream<QuerySnapshot> getUserAchievements(String userId) {
+    return _userAchievementsCollection
+        .where('userId', isEqualTo: userId)
+        .orderBy('earnedAt', descending: true)
+        .snapshots();
+  }
+
+  /// Check and award achievements based on user stats
+  Future<void> checkAndAwardAchievements(String userId) async {
+    try {
+      // Get user stats
+      DocumentSnapshot userDoc = await _usersCollection.doc(userId).get();
+      if (!userDoc.exists) return;
+
+      Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>;
+      int streakDays = userData['streakDays'] ?? 0;
+      int rewardPoints = userData['rewardPoints'] ?? 0;
+
+      // Get medication stats
+      Map<String, dynamic> medStats = await getMedicationStats(userId);
+      int totalTaken = medStats['totalTaken'] ?? 0;
+      double adherenceRate = (medStats['adherenceRate'] ?? 0).toDouble();
+
+      // Get all available achievements
+      QuerySnapshot achievements = await _achievementsCollection
+          .where('isActive', isEqualTo: true)
+          .get();
+
+      // Get user's already earned achievements
+      QuerySnapshot userAchievements = await _userAchievementsCollection
+          .where('userId', isEqualTo: userId)
+          .get();
+
+      Set<String> earnedAchievementIds = userAchievements.docs
+          .map((doc) => doc.get('achievementId').toString())
+          .toSet();
+
+      // Check each achievement
+      for (var achievementDoc in achievements.docs) {
+        Map<String, dynamic> achievement =
+            achievementDoc.data() as Map<String, dynamic>;
+        String achievementId = achievementDoc.id;
+
+        // Skip if already earned
+        if (earnedAchievementIds.contains(achievementId)) continue;
+
+        String type = achievement['type'];
+        bool criteriaMet = false;
+
+        // Check achievement criteria
+        switch (type) {
+          case 'streak_days':
+            int requiredDays = achievement['requiredValue'];
+            criteriaMet = streakDays >= requiredDays;
+            break;
+          case 'total_points':
+            int requiredPoints = achievement['requiredValue'];
+            criteriaMet = rewardPoints >= requiredPoints;
+            break;
+          case 'total_doses':
+            int requiredDoses = achievement['requiredValue'];
+            criteriaMet = totalTaken >= requiredDoses;
+            break;
+          case 'adherence_rate':
+            double requiredRate = achievement['requiredValue'].toDouble();
+            criteriaMet = adherenceRate >= requiredRate;
+            break;
+        }
+
+        // Award achievement if criteria met
+        if (criteriaMet) {
+          await _userAchievementsCollection.add({
+            'userId': userId,
+            'achievementId': achievementId,
+            'earnedAt': FieldValue.serverTimestamp(),
+            'pointsAwarded': achievement['pointsAwarded'],
+          });
+
+          // Add points to user
+          int pointsAwarded = achievement['pointsAwarded'];
+          await _usersCollection.doc(userId).update({
+            'rewardPoints': rewardPoints + pointsAwarded,
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+        }
+      }
+    } catch (e) {
+      print('Error checking achievements: $e');
+    }
+  }
+
+  /// Get user's achievement progress
+  Future<Map<String, dynamic>> getAchievementProgress(String userId) async {
+    try {
+      // Get user stats
+      DocumentSnapshot userDoc = await _usersCollection.doc(userId).get();
+      if (!userDoc.exists) return {};
+
+      Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>;
+      int streakDays = userData['streakDays'] ?? 0;
+      int rewardPoints = userData['rewardPoints'] ?? 0;
+
+      // Get medication stats
+      Map<String, dynamic> medStats = await getMedicationStats(userId);
+      int totalTaken = medStats['totalTaken'] ?? 0;
+      double adherenceRate = (medStats['adherenceRate'] ?? 0).toDouble();
+
+      // Get user's achievements
+      QuerySnapshot userAchievements = await _userAchievementsCollection
+          .where('userId', isEqualTo: userId)
+          .get();
+
+      Set<String> earnedAchievementIds = userAchievements.docs
+          .map((doc) => doc.get('achievementId').toString())
+          .toSet();
+
+      return {
+        'streakDays': streakDays,
+        'totalPoints': rewardPoints,
+        'totalDoses': totalTaken,
+        'adherenceRate': adherenceRate,
+        'earnedAchievements': earnedAchievementIds.length,
+        'earnedAchievementIds': earnedAchievementIds,
+      };
+    } catch (e) {
+      throw Exception('Error getting achievement progress: $e');
+    }
+  }
+
+  /// Add symptom log
+  Future<String> addSymptomLog({
+    required String userId,
+    required List<String> symptoms,
+    required String severity,
+    required String notes,
+    required DateTime timestamp,
+  }) async {
+    try {
+      DocumentReference doc = await _symptomLogsCollection.add({
+        'userId': userId,
+        'symptoms': symptoms,
+        'severity': severity,
+        'notes': notes,
+        'timestamp': timestamp,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+      return doc.id;
+    } catch (e) {
+      throw Exception('Error adding symptom log: $e');
+    }
+  }
+
+  /// Get user symptom logs
+  Stream<QuerySnapshot> getUserSymptomLogs(String userId) {
+    return _symptomLogsCollection
+        .where('userId', isEqualTo: userId)
+        .orderBy('timestamp', descending: true)
+        .snapshots();
+  }
+
+  /// Get recent symptom logs for a user (last 7 days)
+  Stream<QuerySnapshot> getRecentSymptomLogs(String userId) {
+    DateTime sevenDaysAgo = DateTime.now().subtract(const Duration(days: 7));
+    return _symptomLogsCollection
+        .where('userId', isEqualTo: userId)
+        .where('timestamp', isGreaterThanOrEqualTo: sevenDaysAgo)
+        .orderBy('timestamp', descending: true)
+        .snapshots();
+  }
+
+  /// Get symptom logs for a specific date range
+  Stream<QuerySnapshot> getSymptomLogsByDateRange(
+    String userId,
+    DateTime startDate,
+    DateTime endDate,
+  ) {
+    return _symptomLogsCollection
+        .where('userId', isEqualTo: userId)
+        .where('timestamp', isGreaterThanOrEqualTo: startDate)
+        .where('timestamp', isLessThanOrEqualTo: endDate)
+        .orderBy('timestamp', descending: true)
+        .snapshots();
+  }
+
+  /// Update symptom log
+  Future<void> updateSymptomLog({
+    required String logId,
+    List<String>? symptoms,
+    String? severity,
+    String? notes,
+    DateTime? timestamp,
+  }) async {
+    try {
+      Map<String, dynamic> updates = {};
+
+      if (symptoms != null) updates['symptoms'] = symptoms;
+      if (severity != null) updates['severity'] = severity;
+      if (notes != null) updates['notes'] = notes;
+      if (timestamp != null) updates['timestamp'] = timestamp;
+
+      updates['updatedAt'] = FieldValue.serverTimestamp();
+
+      await _symptomLogsCollection.doc(logId).update(updates);
+    } catch (e) {
+      throw Exception('Error updating symptom log: $e');
+    }
+  }
+
+  /// Delete symptom log
+  Future<void> deleteSymptomLog(String logId) async {
+    try {
+      await _symptomLogsCollection.doc(logId).delete();
+    } catch (e) {
+      throw Exception('Error deleting symptom log: $e');
+    }
+  }
+
+  /// Get symptom statistics for a user
+  Future<Map<String, dynamic>> getSymptomStats(String userId) async {
+    try {
+      DateTime thirtyDaysAgo =
+          DateTime.now().subtract(const Duration(days: 30));
+
+      QuerySnapshot logs = await _symptomLogsCollection
+          .where('userId', isEqualTo: userId)
+          .where('timestamp', isGreaterThanOrEqualTo: thirtyDaysAgo)
+          .get();
+
+      Map<String, int> symptomFrequency = {};
+      Map<String, int> severityCount = {
+        'Mild': 0,
+        'Moderate': 0,
+        'Severe': 0,
+      };
+
+      int totalLogs = logs.docs.length;
+
+      for (var doc in logs.docs) {
+        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+
+        // Count severity
+        String severity = data['severity'] ?? '';
+        if (severityCount.containsKey(severity)) {
+          severityCount[severity] = (severityCount[severity] ?? 0) + 1;
+        }
+
+        // Count symptom frequency
+        List<String> symptoms = List<String>.from(data['symptoms'] ?? []);
+        for (String symptom in symptoms) {
+          symptomFrequency[symptom] = (symptomFrequency[symptom] ?? 0) + 1;
+        }
+      }
+
+      // Get most common symptoms
+      List<Map<String, dynamic>> topSymptoms = symptomFrequency.entries
+          .map((e) => {'symptom': e.key, 'count': e.value})
+          .toList()
+        ..sort((a, b) => (b['count'] as int).compareTo(a['count'] as int));
+
+      if (topSymptoms.length > 5) {
+        topSymptoms = topSymptoms.take(5).toList();
+      }
+
+      return {
+        'totalLogs': totalLogs,
+        'severityCount': severityCount,
+        'topSymptoms': topSymptoms,
+        'dateRange': 'Last 30 days',
+      };
+    } catch (e) {
+      throw Exception('Error getting symptom stats: $e');
     }
   }
 }

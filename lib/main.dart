@@ -25,6 +25,7 @@ import 'screens/features/milestone_tracker_screen.dart';
 import 'screens/notifications/notifications_screen.dart';
 import 'screens/profile/edit_profile_screen.dart';
 import 'screens/auth/forgot_password_screen.dart';
+import 'services/rewards_init_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
