@@ -25,6 +25,8 @@ class FirestoreService {
       _firestore.collection('user_achievements');
   CollectionReference get _symptomLogsCollection =>
       _firestore.collection('symptom_logs');
+  CollectionReference get _healthJournalCollection =>
+      _firestore.collection('health_journal');
 
   /// Create user document
   Future<void> createUser({
@@ -1157,6 +1159,192 @@ class FirestoreService {
       };
     } catch (e) {
       throw Exception('Error getting symptom stats: $e');
+    }
+  }
+
+  /// Add health journal entry
+  Future<String> addHealthJournalEntry({
+    required String userId,
+    required String date,
+    required String time,
+    required String content,
+    required List<String> tags,
+    required String mood,
+    required String energyLevel,
+    required DateTime timestamp,
+  }) async {
+    try {
+      DocumentReference doc = await _healthJournalCollection.add({
+        'userId': userId,
+        'date': date,
+        'time': time,
+        'content': content,
+        'tags': tags,
+        'mood': mood,
+        'energyLevel': energyLevel,
+        'timestamp': timestamp,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+      return doc.id;
+    } catch (e) {
+      throw Exception('Error adding health journal entry: $e');
+    }
+  }
+
+  /// Get user health journal entries
+  Stream<QuerySnapshot> getUserHealthJournalEntries(String userId) {
+    return _healthJournalCollection
+        .where('userId', isEqualTo: userId)
+        .orderBy('timestamp', descending: true)
+        .snapshots();
+  }
+
+  /// Get recent health journal entries for a user (last 7 days)
+  Stream<QuerySnapshot> getRecentHealthJournalEntries(String userId) {
+    DateTime sevenDaysAgo = DateTime.now().subtract(const Duration(days: 7));
+    return _healthJournalCollection
+        .where('userId', isEqualTo: userId)
+        .where('timestamp', isGreaterThanOrEqualTo: sevenDaysAgo)
+        .orderBy('timestamp', descending: true)
+        .snapshots();
+  }
+
+  /// Get today's health journal entry for a user
+  Future<Map<String, dynamic>?> getTodayHealthJournalEntry(
+      String userId) async {
+    try {
+      DateTime now = DateTime.now();
+      DateTime startOfDay = DateTime(now.year, now.month, now.day);
+      DateTime endOfDay = startOfDay.add(const Duration(days: 1));
+
+      QuerySnapshot query = await _healthJournalCollection
+          .where('userId', isEqualTo: userId)
+          .where('timestamp', isGreaterThanOrEqualTo: startOfDay)
+          .where('timestamp', isLessThan: endOfDay)
+          .limit(1)
+          .get();
+
+      if (query.docs.isNotEmpty) {
+        return query.docs.first.data() as Map<String, dynamic>?;
+      }
+      return null;
+    } catch (e) {
+      throw Exception('Error getting today\'s journal entry: $e');
+    }
+  }
+
+  /// Update health journal entry
+  Future<void> updateHealthJournalEntry({
+    required String entryId,
+    String? date,
+    String? time,
+    String? content,
+    List<String>? tags,
+    String? mood,
+    String? energyLevel,
+    DateTime? timestamp,
+  }) async {
+    try {
+      Map<String, dynamic> updates = {};
+
+      if (date != null) updates['date'] = date;
+      if (time != null) updates['time'] = time;
+      if (content != null) updates['content'] = content;
+      if (tags != null) updates['tags'] = tags;
+      if (mood != null) updates['mood'] = mood;
+      if (energyLevel != null) updates['energyLevel'] = energyLevel;
+      if (timestamp != null) updates['timestamp'] = timestamp;
+
+      updates['updatedAt'] = FieldValue.serverTimestamp();
+
+      await _healthJournalCollection.doc(entryId).update(updates);
+    } catch (e) {
+      throw Exception('Error updating health journal entry: $e');
+    }
+  }
+
+  /// Delete health journal entry
+  Future<void> deleteHealthJournalEntry(String entryId) async {
+    try {
+      await _healthJournalCollection.doc(entryId).delete();
+    } catch (e) {
+      throw Exception('Error deleting health journal entry: $e');
+    }
+  }
+
+  /// Get health journal statistics for a user
+  Future<Map<String, dynamic>> getHealthJournalStats(String userId) async {
+    try {
+      DateTime thirtyDaysAgo =
+          DateTime.now().subtract(const Duration(days: 30));
+
+      QuerySnapshot entries = await _healthJournalCollection
+          .where('userId', isEqualTo: userId)
+          .where('timestamp', isGreaterThanOrEqualTo: thirtyDaysAgo)
+          .get();
+
+      Map<String, int> moodCount = {
+        'Great': 0,
+        'Good': 0,
+        'Okay': 0,
+        'Not Good': 0,
+        'Bad': 0,
+      };
+
+      Map<String, int> energyCount = {
+        'High': 0,
+        'Medium': 0,
+        'Low': 0,
+      };
+
+      int totalEntries = entries.docs.length;
+
+      for (var doc in entries.docs) {
+        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+
+        // Count mood
+        String mood = data['mood'] ?? '';
+        if (moodCount.containsKey(mood)) {
+          moodCount[mood] = (moodCount[mood] ?? 0) + 1;
+        }
+
+        // Count energy level
+        String energyLevel = data['energyLevel'] ?? '';
+        if (energyCount.containsKey(energyLevel)) {
+          energyCount[energyLevel] = (energyCount[energyLevel] ?? 0) + 1;
+        }
+      }
+
+      // Find most common mood and energy level
+      String mostCommonMood = 'Good';
+      String mostCommonEnergy = 'Medium';
+      int maxMoodCount = 0;
+      int maxEnergyCount = 0;
+
+      moodCount.forEach((mood, count) {
+        if (count > maxMoodCount) {
+          maxMoodCount = count;
+          mostCommonMood = mood;
+        }
+      });
+
+      energyCount.forEach((energy, count) {
+        if (count > maxEnergyCount) {
+          maxEnergyCount = count;
+          mostCommonEnergy = energy;
+        }
+      });
+
+      return {
+        'totalEntries': totalEntries,
+        'moodCount': moodCount,
+        'energyCount': energyCount,
+        'mostCommonMood': mostCommonMood,
+        'mostCommonEnergy': mostCommonEnergy,
+        'dateRange': 'Last 30 days',
+      };
+    } catch (e) {
+      throw Exception('Error getting health journal stats: $e');
     }
   }
 }
