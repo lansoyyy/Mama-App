@@ -3,6 +3,8 @@ import '../../utils/colors.dart';
 import '../../utils/constants.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/custom_card.dart';
+import '../../models/medication_model.dart';
+import 'medication_detail_screen.dart';
 
 class MedInfoHubScreen extends StatefulWidget {
   const MedInfoHubScreen({super.key});
@@ -13,11 +15,100 @@ class MedInfoHubScreen extends StatefulWidget {
 
 class _MedInfoHubScreenState extends State<MedInfoHubScreen> {
   String _selectedLanguage = 'English';
+  List<MedicationCategory> _categories = [];
+  List<MedicationCategory> _filteredCategories = [];
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _categories = getMedicationCategories();
+    _filteredCategories = List.from(_categories);
+    _searchController.addListener(_filterCategories);
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _filterCategories() {
+    setState(() {
+      if (_searchController.text.isEmpty) {
+        _filteredCategories = List.from(_categories);
+      } else {
+        _filteredCategories = _categories.where((category) {
+          final searchLower = _searchController.text.toLowerCase();
+          final nameLower = category.name.toLowerCase();
+          final descriptionLower = category.description.toLowerCase();
+
+          if (_selectedLanguage == 'Filipino' &&
+              category.translationFilipino != null) {
+            final translationLower =
+                category.translationFilipino!.toLowerCase();
+            return nameLower.contains(searchLower) ||
+                descriptionLower.contains(searchLower) ||
+                translationLower.contains(searchLower);
+          } else if (_selectedLanguage == 'Cebuano' &&
+              category.translationCebuano != null) {
+            final translationLower = category.translationCebuano!.toLowerCase();
+            return nameLower.contains(searchLower) ||
+                descriptionLower.contains(searchLower) ||
+                translationLower.contains(searchLower);
+          }
+
+          return nameLower.contains(searchLower) ||
+              descriptionLower.contains(searchLower);
+        }).toList();
+      }
+    });
+  }
+
+  String _getLocalizedText(String? englishText, String? translatedText) {
+    if (_selectedLanguage == 'English' || translatedText == null) {
+      return englishText ?? '';
+    }
+    return translatedText;
+  }
+
+  String _getLocalizedTitle() {
+    switch (_selectedLanguage) {
+      case 'Filipino':
+        return 'Matuto Tungkol sa Iyong mga Gamot';
+      case 'Cebuano':
+        return 'Kat-unan Mahitungod sa Imong mga Tambal';
+      default:
+        return 'Learn About Your Medications';
+    }
+  }
+
+  String _getLocalizedSearchHint() {
+    switch (_selectedLanguage) {
+      case 'Filipino':
+        return 'Maghanap ng gamot...';
+      case 'Cebuano':
+        return 'Pangita og tambal...';
+      default:
+        return 'Search medications...';
+    }
+  }
+
+  String _getLocalizedEmptyResult() {
+    switch (_selectedLanguage) {
+      case 'Filipino':
+        return 'Walang nahanap na kategorya';
+      case 'Cebuano':
+        return 'Wala makit nga kategorya';
+      default:
+        return 'No categories found';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const CustomAppBar(title: 'MedInfo Hub'),
+      appBar: CustomAppBar(title: 'MedInfo Hub'),
       body: Column(
         children: [
           // Header Section
@@ -33,9 +124,9 @@ class _MedInfoHubScreenState extends State<MedInfoHubScreen> {
             ),
             child: Column(
               children: [
-                const Text(
-                  'Learn About Your Medications',
-                  style: TextStyle(
+                Text(
+                  _getLocalizedTitle(),
+                  style: const TextStyle(
                     fontSize: AppConstants.fontXL,
                     fontWeight: FontWeight.bold,
                     color: AppColors.textWhite,
@@ -46,12 +137,11 @@ class _MedInfoHubScreenState extends State<MedInfoHubScreen> {
 
                 // Search Bar
                 TextField(
-                  onChanged: (value) {
-                    // TODO: Implement search functionality
-                  },
+                  controller: _searchController,
                   decoration: InputDecoration(
-                    hintText: 'Search medications...',
-                    prefixIcon: const Icon(Icons.search),
+                    hintText: _getLocalizedSearchHint(),
+                    prefixIcon:
+                        const Icon(Icons.search, color: AppColors.textPrimary),
                     filled: true,
                     fillColor: AppColors.textWhite,
                     border: OutlineInputBorder(
@@ -79,13 +169,17 @@ class _MedInfoHubScreenState extends State<MedInfoHubScreen> {
                         items: AppConstants.supportedLanguages
                             .map((lang) => DropdownMenuItem(
                                   value: lang,
-                                  child: Text(lang),
+                                  child: Text(
+                                    lang,
+                                    style: const TextStyle(color: Colors.black),
+                                  ),
                                 ))
                             .toList(),
                         onChanged: (value) {
                           setState(() {
                             _selectedLanguage = value!;
                           });
+                          _filterCategories();
                         },
                       ),
                     ),
@@ -97,64 +191,40 @@ class _MedInfoHubScreenState extends State<MedInfoHubScreen> {
 
           // Categories
           Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(AppConstants.paddingM),
-              children: [
-                _buildCategoryCard(
-                  'Prenatal Vitamins',
-                  'Essential vitamins for pregnancy',
-                  Icons.medical_services,
-                  AppColors.primary,
-                ),
-                _buildCategoryCard(
-                  'Iron Supplements',
-                  'Prevent anemia during pregnancy',
-                  Icons.bloodtype,
-                  AppColors.error,
-                ),
-                _buildCategoryCard(
-                  'Folic Acid',
-                  'Important for baby development',
-                  Icons.favorite,
-                  AppColors.secondary,
-                ),
-                _buildCategoryCard(
-                  'Calcium',
-                  'Strengthen bones and teeth',
-                  Icons.health_and_safety,
-                  AppColors.info,
-                ),
-                _buildCategoryCard(
-                  'Pain Relief',
-                  'Safe pain management options',
-                  Icons.healing,
-                  AppColors.warning,
-                ),
-                _buildCategoryCard(
-                  'Antibiotics',
-                  'Understanding safe antibiotics',
-                  Icons.medication_liquid,
-                  AppColors.success,
-                ),
-              ],
-            ),
+            child: _filteredCategories.isEmpty
+                ? Center(
+                    child: Text(
+                      _getLocalizedEmptyResult(),
+                      style: const TextStyle(
+                        fontSize: AppConstants.fontL,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.all(AppConstants.paddingM),
+                    itemCount: _filteredCategories.length,
+                    itemBuilder: (context, index) {
+                      final category = _filteredCategories[index];
+                      return _buildCategoryCard(category);
+                    },
+                  ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildCategoryCard(
-    String title,
-    String description,
-    IconData icon,
-    Color color,
-  ) {
+  Widget _buildCategoryCard(MedicationCategory category) {
     return CustomCard(
       margin: const EdgeInsets.only(bottom: AppConstants.paddingM),
       onTap: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('$title details coming soon')),
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => MedicationDetailScreen(
+              category: category,
+            ),
+          ),
         );
       },
       child: Row(
@@ -163,10 +233,11 @@ class _MedInfoHubScreenState extends State<MedInfoHubScreen> {
             width: 60,
             height: 60,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: category.color.withOpacity(0.1),
               borderRadius: BorderRadius.circular(AppConstants.radiusM),
             ),
-            child: Icon(icon, color: color, size: AppConstants.iconL),
+            child: Icon(category.iconData,
+                color: category.color, size: AppConstants.iconL),
           ),
           const SizedBox(width: AppConstants.paddingM),
           Expanded(
@@ -174,7 +245,13 @@ class _MedInfoHubScreenState extends State<MedInfoHubScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  title,
+                  _getLocalizedText(
+                      category.name,
+                      _selectedLanguage == 'Filipino'
+                          ? category.translationFilipino
+                          : _selectedLanguage == 'Cebuano'
+                              ? category.translationCebuano
+                              : null),
                   style: const TextStyle(
                     fontSize: AppConstants.fontL,
                     fontWeight: FontWeight.w600,
@@ -183,7 +260,13 @@ class _MedInfoHubScreenState extends State<MedInfoHubScreen> {
                 ),
                 const SizedBox(height: AppConstants.paddingXS),
                 Text(
-                  description,
+                  _getLocalizedText(
+                      category.description,
+                      _selectedLanguage == 'Filipino'
+                          ? category.translationFilipino
+                          : _selectedLanguage == 'Cebuano'
+                              ? category.translationCebuano
+                              : null),
                   style: const TextStyle(
                     fontSize: AppConstants.fontS,
                     color: AppColors.textSecondary,

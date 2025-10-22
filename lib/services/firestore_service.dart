@@ -13,6 +13,8 @@ class FirestoreService {
       _firestore.collection('medication_logs');
   CollectionReference get _healthRecordsCollection =>
       _firestore.collection('health_records');
+  CollectionReference get _appointmentsCollection =>
+      _firestore.collection('appointments');
 
   /// Create user document
   Future<void> createUser({
@@ -687,6 +689,127 @@ class FirestoreService {
       }
     } catch (e) {
       throw Exception('Error generating daily medication logs: $e');
+    }
+  }
+
+  /// Book appointment
+  Future<String> bookAppointment({
+    required String userId,
+    required String professionalId,
+    required String professionalName,
+    required String professionalSpecialty,
+    required String mobileNumber,
+    required DateTime dateTime,
+    required String notes,
+  }) async {
+    try {
+      DocumentReference doc = await _appointmentsCollection.add({
+        'userId': userId,
+        'professionalId': professionalId,
+        'professionalName': professionalName,
+        'professionalSpecialty': professionalSpecialty,
+        'mobileNumber': mobileNumber,
+        'dateTime': dateTime,
+        'status': 'upcoming',
+        'consultationType': 'call',
+        'notes': notes,
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      return doc.id;
+    } catch (e) {
+      throw Exception('Error booking appointment: $e');
+    }
+  }
+
+  /// Get user appointments
+  Stream<QuerySnapshot> getUserAppointments(String userId) {
+    return _appointmentsCollection
+        .where('userId', isEqualTo: userId)
+        .orderBy('dateTime', descending: true)
+        .snapshots();
+  }
+
+  /// Get upcoming appointments for a user
+  Stream<QuerySnapshot> getUpcomingAppointments(String userId) {
+    DateTime now = DateTime.now();
+    return _appointmentsCollection
+        .where('userId', isEqualTo: userId)
+        .where('dateTime', isGreaterThan: now)
+        .where('status', isEqualTo: 'upcoming')
+        .orderBy('dateTime')
+        .snapshots();
+  }
+
+  /// Get past appointments for a user
+  Stream<QuerySnapshot> getPastAppointments(String userId) {
+    DateTime now = DateTime.now();
+    return _appointmentsCollection
+        .where('userId', isEqualTo: userId)
+        .where('dateTime', isLessThan: now)
+        .orderBy('dateTime', descending: true)
+        .snapshots();
+  }
+
+  /// Update appointment status
+  Future<void> updateAppointmentStatus({
+    required String appointmentId,
+    required String status,
+  }) async {
+    try {
+      await _appointmentsCollection.doc(appointmentId).update({
+        'status': status,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      throw Exception('Error updating appointment status: $e');
+    }
+  }
+
+  /// Cancel appointment
+  Future<void> cancelAppointment(String appointmentId) async {
+    try {
+      await updateAppointmentStatus(
+        appointmentId: appointmentId,
+        status: 'cancelled',
+      );
+    } catch (e) {
+      throw Exception('Error cancelling appointment: $e');
+    }
+  }
+
+  /// Complete appointment
+  Future<void> completeAppointment(String appointmentId) async {
+    try {
+      await updateAppointmentStatus(
+        appointmentId: appointmentId,
+        status: 'completed',
+      );
+    } catch (e) {
+      throw Exception('Error completing appointment: $e');
+    }
+  }
+
+  /// Delete appointment
+  Future<void> deleteAppointment(String appointmentId) async {
+    try {
+      await _appointmentsCollection.doc(appointmentId).delete();
+    } catch (e) {
+      throw Exception('Error deleting appointment: $e');
+    }
+  }
+
+  /// Get appointment details
+  Future<Map<String, dynamic>?> getAppointment(String appointmentId) async {
+    try {
+      DocumentSnapshot doc =
+          await _appointmentsCollection.doc(appointmentId).get();
+      if (doc.exists) {
+        return doc.data() as Map<String, dynamic>?;
+      }
+      return null;
+    } catch (e) {
+      throw Exception('Error getting appointment: $e');
     }
   }
 }
