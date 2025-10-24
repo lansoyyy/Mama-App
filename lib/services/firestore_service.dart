@@ -29,6 +29,8 @@ class FirestoreService {
       _firestore.collection('health_journal');
   CollectionReference get _familyMembersCollection =>
       _firestore.collection('family_members');
+  CollectionReference get _notificationsCollection =>
+      _firestore.collection('notifications');
 
   /// Create user document
   Future<void> createUser({
@@ -58,6 +60,12 @@ class FirestoreService {
         'streakDays': 0,
         'rewardPoints': 0,
       });
+
+      // Generate welcome notification
+      await generateWelcomeNotification(
+        userId: uid,
+        userName: fullName,
+      );
     } catch (e) {
       throw Exception('Error creating user: $e');
     }
@@ -376,6 +384,22 @@ class FirestoreService {
         'streakDays': newStreak,
         'updatedAt': FieldValue.serverTimestamp(),
       });
+
+      // Generate notifications for achievements
+      if (newStreak > currentStreak && newStreak > 1) {
+        await generateStreakAchievementNotification(
+          userId: userId,
+          streakDays: newStreak,
+        );
+      }
+
+      if (newPoints > currentPoints) {
+        await generateRewardEarnedNotification(
+          userId: userId,
+          points: newPoints - currentPoints,
+          reason: 'medication adherence',
+        );
+      }
     } catch (e) {
       print('Error updating user adherence stats: $e');
     }
@@ -456,8 +480,22 @@ class FirestoreService {
           await _medicationLogsCollection.doc(logId).get();
       if (logDoc.exists) {
         String userId = logDoc.get('userId');
+        String medicationName = logDoc.get('medicationName') ?? 'Medication';
+        String dosage = logDoc.get('dosage') ?? 'Unknown dosage';
+
         if (status == 'taken') {
           updateUserAdherenceStats(userId);
+          await generateMedicationTakenNotification(
+            userId: userId,
+            medicationName: medicationName,
+            dosage: dosage,
+          );
+        } else if (status == 'missed') {
+          await generateMedicationMissedNotification(
+            userId: userId,
+            medicationName: medicationName,
+            dosage: dosage,
+          );
         }
       }
     } catch (e) {
@@ -983,6 +1021,13 @@ class FirestoreService {
             'rewardPoints': rewardPoints + pointsAwarded,
             'updatedAt': FieldValue.serverTimestamp(),
           });
+
+          // Generate achievement notification
+          await generateAchievementUnlockedNotification(
+            userId: userId,
+            achievementName: achievement['name'] ?? 'Achievement',
+            pointsAwarded: pointsAwarded,
+          );
         }
       }
     } catch (e) {
@@ -1628,5 +1673,270 @@ class FirestoreService {
     } catch (e) {
       throw Exception('Error getting symptom progress: $e');
     }
+  }
+
+  /// Add notification
+  Future<String> addNotification({
+    required String userId,
+    required String title,
+    required String message,
+    required String type,
+    Map<String, dynamic>? data,
+  }) async {
+    try {
+      DocumentReference doc = await _notificationsCollection.add({
+        'userId': userId,
+        'title': title,
+        'message': message,
+        'type': type,
+        'timestamp': FieldValue.serverTimestamp(),
+        'isRead': false,
+        'data': data ?? {},
+      });
+      return doc.id;
+    } catch (e) {
+      throw Exception('Error adding notification: $e');
+    }
+  }
+
+  /// Get user notifications
+  Stream<QuerySnapshot> getUserNotifications(String userId) {
+    return _notificationsCollection
+        .where('userId', isEqualTo: userId)
+        .orderBy('timestamp', descending: true)
+        .snapshots();
+  }
+
+  /// Get unread notifications count for a user
+  Stream<int> getUnreadNotificationsCount(String userId) {
+    return _notificationsCollection
+        .where('userId', isEqualTo: userId)
+        .where('isRead', isEqualTo: false)
+        .snapshots()
+        .map((snapshot) => snapshot.docs.length);
+  }
+
+  /// Mark notification as read
+  Future<void> markNotificationAsRead(String notificationId) async {
+    try {
+      await _notificationsCollection.doc(notificationId).update({
+        'isRead': true,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      throw Exception('Error marking notification as read: $e');
+    }
+  }
+
+  /// Mark all notifications as read for a user
+  Future<void> markAllNotificationsAsRead(String userId) async {
+    try {
+      QuerySnapshot unreadNotifications = await _notificationsCollection
+          .where('userId', isEqualTo: userId)
+          .where('isRead', isEqualTo: false)
+          .get();
+
+      WriteBatch batch = _firestore.batch();
+      for (var doc in unreadNotifications.docs) {
+        batch.update(doc.reference, {
+          'isRead': true,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      }
+      await batch.commit();
+    } catch (e) {
+      throw Exception('Error marking all notifications as read: $e');
+    }
+  }
+
+  /// Delete notification
+  Future<void> deleteNotification(String notificationId) async {
+    try {
+      await _notificationsCollection.doc(notificationId).delete();
+    } catch (e) {
+      throw Exception('Error deleting notification: $e');
+    }
+  }
+
+  /// Delete old notifications (older than 30 days)
+  Future<void> deleteOldNotifications(String userId) async {
+    try {
+      DateTime thirtyDaysAgo =
+          DateTime.now().subtract(const Duration(days: 30));
+      QuerySnapshot oldNotifications = await _notificationsCollection
+          .where('userId', isEqualTo: userId)
+          .where('timestamp', isLessThan: thirtyDaysAgo)
+          .get();
+
+      WriteBatch batch = _firestore.batch();
+      for (var doc in oldNotifications.docs) {
+        batch.delete(doc.reference);
+      }
+      await batch.commit();
+    } catch (e) {
+      throw Exception('Error deleting old notifications: $e');
+    }
+  }
+
+  /// Generate medication reminder notification
+  Future<void> generateMedicationReminder({
+    required String userId,
+    required String medicationName,
+    required String dosage,
+    required DateTime scheduledTime,
+  }) async {
+    await addNotification(
+      userId: userId,
+      title: 'Medication Reminder',
+      message: 'Time to take your $medicationName ($dosage)',
+      type: 'medication_reminder',
+      data: {
+        'medicationName': medicationName,
+        'dosage': dosage,
+        'scheduledTime': scheduledTime.toIso8601String(),
+      },
+    );
+  }
+
+  /// Generate medication taken notification
+  Future<void> generateMedicationTakenNotification({
+    required String userId,
+    required String medicationName,
+    required String dosage,
+  }) async {
+    await addNotification(
+      userId: userId,
+      title: 'Medication Taken',
+      message: 'You successfully took $medicationName ($dosage)',
+      type: 'medication_taken',
+      data: {
+        'medicationName': medicationName,
+        'dosage': dosage,
+      },
+    );
+  }
+
+  /// Generate medication missed notification
+  Future<void> generateMedicationMissedNotification({
+    required String userId,
+    required String medicationName,
+    required String dosage,
+  }) async {
+    await addNotification(
+      userId: userId,
+      title: 'Medication Missed',
+      message: 'You missed your dose of $medicationName ($dosage)',
+      type: 'medication_missed',
+      data: {
+        'medicationName': medicationName,
+        'dosage': dosage,
+      },
+    );
+  }
+
+  /// Generate streak achievement notification
+  Future<void> generateStreakAchievementNotification({
+    required String userId,
+    required int streakDays,
+  }) async {
+    await addNotification(
+      userId: userId,
+      title: 'Streak Achievement! 🔥',
+      message:
+          'Congratulations! You\'ve maintained a ${streakDays}-day streak!',
+      type: 'streak_achievement',
+      data: {
+        'streakDays': streakDays,
+      },
+    );
+  }
+
+  /// Generate reward earned notification
+  Future<void> generateRewardEarnedNotification({
+    required String userId,
+    required int points,
+    required String reason,
+  }) async {
+    await addNotification(
+      userId: userId,
+      title: 'Reward Earned',
+      message: 'You earned $points points for $reason!',
+      type: 'reward_earned',
+      data: {
+        'points': points,
+        'reason': reason,
+      },
+    );
+  }
+
+  /// Generate appointment reminder notification
+  Future<void> generateAppointmentReminderNotification({
+    required String userId,
+    required String professionalName,
+    required DateTime appointmentTime,
+  }) async {
+    await addNotification(
+      userId: userId,
+      title: 'Upcoming Consultation',
+      message:
+          'Your appointment with $professionalName is tomorrow at ${appointmentTime.hour}:${appointmentTime.minute.toString().padLeft(2, '0')} ${appointmentTime.hour >= 12 ? 'PM' : 'AM'}',
+      type: 'appointment_reminder',
+      data: {
+        'professionalName': professionalName,
+        'appointmentTime': appointmentTime.toIso8601String(),
+      },
+    );
+  }
+
+  /// Generate achievement unlocked notification
+  Future<void> generateAchievementUnlockedNotification({
+    required String userId,
+    required String achievementName,
+    required int pointsAwarded,
+  }) async {
+    await addNotification(
+      userId: userId,
+      title: 'Achievement Unlocked! 🏆',
+      message:
+          'You\'ve unlocked the "$achievementName" achievement and earned $pointsAwarded points!',
+      type: 'achievement_unlocked',
+      data: {
+        'achievementName': achievementName,
+        'pointsAwarded': pointsAwarded,
+      },
+    );
+  }
+
+  /// Generate health tip notification
+  Future<void> generateHealthTipNotification({
+    required String userId,
+    required String tip,
+  }) async {
+    await addNotification(
+      userId: userId,
+      title: 'Health Tip',
+      message: tip,
+      type: 'health_tip',
+      data: {
+        'tip': tip,
+      },
+    );
+  }
+
+  /// Generate welcome notification
+  Future<void> generateWelcomeNotification({
+    required String userId,
+    required String userName,
+  }) async {
+    await addNotification(
+      userId: userId,
+      title: 'Welcome to MAMA! 👋',
+      message:
+          'Welcome $userName! We\'re here to support your maternal health journey.',
+      type: 'welcome',
+      data: {
+        'userName': userName,
+      },
+    );
   }
 }

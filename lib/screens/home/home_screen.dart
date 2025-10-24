@@ -5,6 +5,7 @@ import '../../utils/colors.dart';
 import '../../utils/constants.dart';
 import '../../widgets/stat_card.dart';
 import '../../widgets/medication_card.dart';
+import '../../widgets/notification_badge.dart';
 import '../profile/profile_screen.dart' show ProfileScreen;
 import '../medications/medications_screen.dart' show MedicationsScreen;
 import '../../services/auth_service.dart';
@@ -216,8 +217,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ),
             actions: [
-              IconButton(
-                icon: const Icon(Icons.notifications_outlined),
+              NotificationIconButton(
                 onPressed: () {
                   Navigator.pushNamed(context, '/notifications');
                 },
