@@ -55,7 +55,7 @@ class MedicationCategory {
 
 // Hardcoded medication data
 List<MedicationCategory> getMedicationCategories() {
-  return [
+  List<MedicationCategory> categories = [
     MedicationCategory(
       id: '1',
       name: 'Prenatal Vitamins',
@@ -111,12 +111,18 @@ List<MedicationCategory> getMedicationCategories() {
       translationCebuano: 'Antibyotiko',
     ),
   ];
+  
+  // Sort categories alphabetically by name
+  categories.sort((a, b) => a.name.compareTo(b.name));
+  return categories;
 }
 
 List<MedicationModel> getMedicationsByCategory(String categoryId) {
+  List<MedicationModel> medications;
+  
   switch (categoryId) {
     case '1': // Prenatal Vitamins
-      return [
+      medications = [
         MedicationModel(
           id: 'p1',
           name: 'Materna',
@@ -175,8 +181,9 @@ List<MedicationModel> getMedicationsByCategory(String categoryId) {
           translationCebuano: 'Obimin',
         ),
       ];
+      break;
     case '2': // Iron Supplements
-      return [
+      medications = [
         MedicationModel(
           id: 'i1',
           name: 'Ferrous Sulfate',
@@ -244,8 +251,9 @@ List<MedicationModel> getMedicationsByCategory(String categoryId) {
           translationCebuano: 'Irofol',
         ),
       ];
+      break;
     case '3': // Folic Acid
-      return [
+      medications = [
         MedicationModel(
           id: 'f1',
           name: 'Folart',
@@ -279,8 +287,9 @@ List<MedicationModel> getMedicationsByCategory(String categoryId) {
           translationCebuano: 'Folart',
         ),
       ];
+      break;
     case '4': // Calcium
-      return [
+      medications = [
         MedicationModel(
           id: 'c1',
           name: 'Calcium Carbonate',
@@ -315,8 +324,9 @@ List<MedicationModel> getMedicationsByCategory(String categoryId) {
           translationCebuano: 'Kalsyo Karbonato',
         ),
       ];
+      break;
     case '5': // Pain Relief
-      return [
+      medications = [
         MedicationModel(
           id: 'pr1',
           name: 'Paracetamol',
@@ -350,8 +360,9 @@ List<MedicationModel> getMedicationsByCategory(String categoryId) {
           translationCebuano: 'Paracetamol',
         ),
       ];
+      break;
     case '6': // Antibiotics
-      return [
+      medications = [
         MedicationModel(
           id: 'a1',
           name: 'Amoxicillin',
@@ -386,7 +397,13 @@ List<MedicationModel> getMedicationsByCategory(String categoryId) {
           translationCebuano: 'Amoxicillin',
         ),
       ];
+      break;
     default:
-      return [];
+      medications = [];
+      break;
   }
+  
+  // Sort medications alphabetically by name
+  medications.sort((a, b) => a.name.compareTo(b.name));
+  return medications;
 }

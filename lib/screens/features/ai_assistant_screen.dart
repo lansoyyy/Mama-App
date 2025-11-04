@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../utils/colors.dart';
 import '../../utils/constants.dart';
@@ -15,9 +14,6 @@ class AIAssistantScreen extends StatefulWidget {
 }
 
 class _AIAssistantScreenState extends State<AIAssistantScreen> {
-  final stt.SpeechToText _speech = stt.SpeechToText();
-  bool _speechEnabled = false;
-  bool _isListening = false;
 
   final TextEditingController _messageController = TextEditingController();
   final List<Map<String, String>> _messages = [];
@@ -27,20 +23,13 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
   @override
   void initState() {
     super.initState();
-    _initSpeech();
     // Add welcome message
     _addMessage('assistant',
         'Hello! I\'m your AI Maternal Health Assistant. I\'m here to help you with questions about medications, pregnancy health, symptoms, and general maternal wellness. How can I assist you today?');
   }
 
-  void _initSpeech() async {
-    _speechEnabled = await _speech.initialize();
-    setState(() {});
-  }
-
   @override
   void dispose() {
-    _speech.cancel();
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -71,7 +60,6 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
 
     _addMessage('user', userMessage);
     _messageController.clear();
-    _stopListening();
     setState(() {
       _isLoading = true;
     });
@@ -116,32 +104,6 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
     }
   }
 
-  void _startListening() async {
-    if (!_speechEnabled) return;
-
-    setState(() {
-      _isListening = true;
-    });
-
-    await _speech.listen(
-      onResult: (result) {
-        setState(() {
-          _messageController.text = result.recognizedWords;
-        });
-      },
-      listenFor: const Duration(seconds: 30),
-      pauseFor: const Duration(seconds: 3),
-      partialResults: true,
-      localeId: "en_US",
-    );
-  }
-
-  void _stopListening() async {
-    await _speech.stop();
-    setState(() {
-      _isListening = false;
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -337,60 +299,6 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
               ),
               child: Row(
                 children: [
-                  // Microphone button
-                  if (_speechEnabled)
-                    Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: _isListening
-                              ? [
-                                  AppColors.error,
-                                  AppColors.error.withOpacity(0.8)
-                                ]
-                              : [
-                                  AppColors.warning,
-                                  AppColors.warning.withOpacity(0.8)
-                                ],
-                        ),
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: (_isListening
-                                    ? AppColors.error
-                                    : AppColors.warning)
-                                .withOpacity(0.3),
-                            blurRadius: 8,
-                            offset: const Offset(0, 3),
-                          ),
-                        ],
-                      ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(16),
-                          onTap: _isLoading
-                              ? null
-                              : () {
-                                  if (_isListening) {
-                                    _stopListening();
-                                  } else {
-                                    _startListening();
-                                  }
-                                },
-                          child: Padding(
-                            padding: const EdgeInsets.all(12),
-                            child: Icon(
-                              _isListening
-                                  ? FontAwesomeIcons.stop
-                                  : FontAwesomeIcons.microphone,
-                              color: Colors.white,
-                              size: 20,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  if (_speechEnabled) const SizedBox(width: 12),
                   // Text input field
                   Expanded(
                     child: TextField(
@@ -401,9 +309,7 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
                         color: AppColors.textPrimary,
                       ),
                       decoration: InputDecoration(
-                        hintText: _isListening
-                            ? 'Listening...'
-                            : 'Ask about your health...',
+                        hintText: 'Ask about your health...',
                         hintStyle: TextStyle(
                           color: AppColors.aiAssistant.withOpacity(0.5),
                         ),

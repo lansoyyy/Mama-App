@@ -1487,6 +1487,21 @@ class FirestoreService {
     }
   }
 
+  /// Update family member profile picture
+  Future<void> updateFamilyMemberProfilePicture({
+    required String memberId,
+    required String profilePictureUrl,
+  }) async {
+    try {
+      await _familyMembersCollection.doc(memberId).update({
+        'profilePicture': profilePictureUrl,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      throw Exception('Error updating family member profile picture: $e');
+    }
+  }
+
   /// Get primary user for a family member
   Future<Map<String, dynamic>?> getPrimaryUser(String userId) async {
     try {

@@ -35,11 +35,11 @@ class _MedInfoHubScreenState extends State<MedInfoHubScreen> {
 
   void _filterCategories() {
     setState(() {
-      if (_searchController.text.isEmpty) {
+      if (_searchController.text.trim().isEmpty) {
         _filteredCategories = List.from(_categories);
       } else {
+        final searchLower = _searchController.text.trim().toLowerCase();
         _filteredCategories = _categories.where((category) {
-          final searchLower = _searchController.text.toLowerCase();
           final nameLower = category.name.toLowerCase();
           final descriptionLower = category.description.toLowerCase();
 

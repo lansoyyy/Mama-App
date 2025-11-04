@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 import '../../utils/colors.dart';
 import '../../utils/constants.dart';
 import '../../widgets/custom_app_bar.dart';
@@ -8,6 +10,7 @@ import '../../widgets/loading_indicator.dart';
 import '../../models/family_member_model.dart';
 import '../../services/firestore_service.dart';
 import '../../services/auth_service.dart';
+import '../../services/firebase_storage_service.dart';
 
 class MultiUserScreen extends StatefulWidget {
   const MultiUserScreen({super.key});
@@ -19,12 +22,14 @@ class MultiUserScreen extends StatefulWidget {
 class _MultiUserScreenState extends State<MultiUserScreen> {
   final FirestoreService _firestoreService = FirestoreService();
   final AuthService _authService = AuthService();
+  final FirebaseStorageService _storageService = FirebaseStorageService();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _relationshipController = TextEditingController();
   final TextEditingController _infoController = TextEditingController();
 
   bool _isLoading = false;
   String? _editingMemberId;
+  File? _selectedImageFile;
 
   @override
   void dispose() {
@@ -186,18 +191,48 @@ class _MultiUserScreenState extends State<MultiUserScreen> {
       builder: (context) => CustomCard(
         margin: const EdgeInsets.only(bottom: AppConstants.paddingM),
         onTap: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('${member.name} profile coming soon')),
-          );
+          _showFamilyMemberDetails(member);
         },
         child: Row(
           children: [
-            Container(
-              width: 60,
-              height: 60,
-              decoration: BoxDecoration(
-                  color: color.withOpacity(0.1), shape: BoxShape.circle),
-              child: Icon(icon, color: color, size: AppConstants.iconL),
+            Stack(
+              children: [
+                CircleAvatar(
+                  radius: 30,
+                  backgroundColor: color.withOpacity(0.1),
+                  backgroundImage: (member.profilePicture != null &&
+                          member.profilePicture!.isNotEmpty)
+                      ? NetworkImage(member.profilePicture!) as ImageProvider
+                      : null,
+                  child: (member.profilePicture == null ||
+                          member.profilePicture!.isEmpty)
+                      ? Icon(icon, color: color, size: AppConstants.iconL)
+                      : null,
+                ),
+                if (!member.isPrimary)
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: GestureDetector(
+                      onTap: () {
+                        _showImageSourceDialog(member);
+                      },
+                      child: Container(
+                        width: 24,
+                        height: 24,
+                        decoration: const BoxDecoration(
+                          color: AppColors.primary,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.camera_alt,
+                          color: AppColors.textWhite,
+                          size: 14,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
             const SizedBox(width: AppConstants.paddingM),
             Expanded(
@@ -283,42 +318,355 @@ class _MultiUserScreenState extends State<MultiUserScreen> {
     );
   }
 
+  void _showFamilyMemberDetails(FamilyMember member) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        contentPadding: EdgeInsets.zero,
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(AppConstants.paddingL),
+                decoration: BoxDecoration(
+                  gradient: AppColors.primaryGradient,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(AppConstants.radiusM),
+                    topRight: Radius.circular(AppConstants.radiusM),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    CircleAvatar(
+                      radius: 50,
+                      backgroundColor: AppColors.textWhite,
+                      backgroundImage: (member.profilePicture != null &&
+                              member.profilePicture!.isNotEmpty)
+                          ? NetworkImage(member.profilePicture!) as ImageProvider
+                          : null,
+                      child: (member.profilePicture == null ||
+                              member.profilePicture!.isEmpty)
+                          ? Icon(Icons.person, size: 50, color: AppColors.primary)
+                          : null,
+                    ),
+                    const SizedBox(height: AppConstants.paddingM),
+                    Text(
+                      member.name,
+                      style: const TextStyle(
+                        fontSize: AppConstants.fontXL,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textWhite,
+                      ),
+                    ),
+                    const SizedBox(height: AppConstants.paddingS),
+                    Text(
+                      member.relationship,
+                      style: const TextStyle(
+                        fontSize: AppConstants.fontM,
+                        color: AppColors.textWhite,
+                      ),
+                    ),
+                    if (member.isPrimary) ...[
+                      const SizedBox(height: AppConstants.paddingS),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppConstants.paddingM,
+                          vertical: AppConstants.paddingXS,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.textWhite.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(AppConstants.radiusM),
+                        ),
+                        child: const Text(
+                          'Primary Account',
+                          style: TextStyle(
+                            fontSize: AppConstants.fontS,
+                            color: AppColors.textWhite,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(AppConstants.paddingL),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Additional Information',
+                      style: TextStyle(
+                        fontSize: AppConstants.fontL,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: AppConstants.paddingM),
+                    Text(
+                      member.info,
+                      style: const TextStyle(
+                        fontSize: AppConstants.fontM,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: AppConstants.paddingL),
+                    if (!member.isPrimary) ...[
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                                _showEditFamilyMemberDialog(member);
+                              },
+                              icon: const Icon(Icons.edit),
+                              label: const Text('Edit'),
+                            ),
+                          ),
+                          const SizedBox(width: AppConstants.paddingM),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                                _showDeleteConfirmationDialog(member);
+                              },
+                              icon: const Icon(Icons.delete),
+                              label: const Text('Delete'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppColors.error,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showImageSourceDialog(FamilyMember member) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Change Profile Picture'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt, color: AppColors.primary),
+              title: const Text('Take Photo'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImageFromCamera(member);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library, color: AppColors.primary),
+              title: const Text('Choose from Gallery'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImageFromGallery(member);
+              },
+            ),
+            if (member.profilePicture != null && member.profilePicture!.isNotEmpty)
+              ListTile(
+                leading: const Icon(Icons.delete, color: AppColors.error),
+                title: const Text('Remove Photo'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _removeProfilePicture(member);
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickImageFromCamera(FamilyMember member) async {
+    final File? imageFile = await _storageService.pickImageFromCamera();
+    if (imageFile != null) {
+      await _uploadProfilePicture(member, imageFile);
+    }
+  }
+
+  Future<void> _pickImageFromGallery(FamilyMember member) async {
+    final File? imageFile = await _storageService.pickImageFromGallery();
+    if (imageFile != null) {
+      await _uploadProfilePicture(member, imageFile);
+    }
+  }
+
+  Future<void> _uploadProfilePicture(FamilyMember member, File imageFile) async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final uploadedUrl = await _storageService.uploadProfilePicture(
+        userId: member.id,
+        imageFile: imageFile,
+      );
+
+      if (uploadedUrl != null) {
+        await _firestoreService.updateFamilyMemberProfilePicture(
+          memberId: member.id,
+          profilePictureUrl: uploadedUrl,
+        );
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Profile picture updated successfully'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error updating profile picture: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _removeProfilePicture(FamilyMember member) async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      await _firestoreService.updateFamilyMemberProfilePicture(
+        memberId: member.id,
+        profilePictureUrl: '',
+      );
+
+      // Also delete from storage
+      await _storageService.deleteProfilePicture(member.id);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Profile picture removed successfully'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error removing profile picture: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
   void _showAddFamilyMemberDialog() {
     _clearControllers();
     _editingMemberId = null;
+    _selectedImageFile = null;
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Add Family Member'),
         content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Name',
-                  hintText: 'Enter family member name',
+          child: StatefulBuilder(
+            builder: (context, setState) => Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Center(
+                  child: Stack(
+                    children: [
+                      CircleAvatar(
+                        radius: 40,
+                        backgroundColor: AppColors.primaryLight,
+                        backgroundImage: _selectedImageFile != null
+                            ? FileImage(_selectedImageFile!) as ImageProvider
+                            : null,
+                        child: _selectedImageFile == null
+                            ? const Icon(Icons.person,
+                                size: 40, color: AppColors.primary)
+                            : null,
+                      ),
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: Container(
+                          decoration: const BoxDecoration(
+                            color: AppColors.primary,
+                            shape: BoxShape.circle,
+                          ),
+                          child: IconButton(
+                            icon: const Icon(Icons.camera_alt,
+                                color: AppColors.textWhite, size: 16),
+                            onPressed: () {
+                              _showAddMemberImageSourceDialog(setState);
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: AppConstants.paddingM),
-              TextField(
-                controller: _relationshipController,
-                decoration: const InputDecoration(
-                  labelText: 'Relationship',
-                  hintText: 'e.g., Mother, Child, Grandmother',
+                const SizedBox(height: AppConstants.paddingM),
+                TextField(
+                  controller: _nameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Name',
+                    hintText: 'Enter family member name',
+                  ),
                 ),
-              ),
-              const SizedBox(height: AppConstants.paddingM),
-              TextField(
-                controller: _infoController,
-                decoration: const InputDecoration(
-                  labelText: 'Additional Info',
-                  hintText: 'e.g., Age, Medical conditions',
+                const SizedBox(height: AppConstants.paddingM),
+                TextField(
+                  controller: _relationshipController,
+                  decoration: const InputDecoration(
+                    labelText: 'Relationship',
+                    hintText: 'e.g., Mother, Child, Grandmother',
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(height: AppConstants.paddingM),
+                TextField(
+                  controller: _infoController,
+                  decoration: const InputDecoration(
+                    labelText: 'Additional Info',
+                    hintText: 'e.g., Age, Medical conditions',
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
         actions: [
@@ -337,6 +685,46 @@ class _MultiUserScreenState extends State<MultiUserScreen> {
                 : const Text('Add'),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showAddMemberImageSourceDialog(StateSetter setState) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add Profile Picture'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt, color: AppColors.primary),
+              title: const Text('Take Photo'),
+              onTap: () async {
+                Navigator.pop(context);
+                final File? imageFile = await _storageService.pickImageFromCamera();
+                if (imageFile != null) {
+                  setState(() {
+                    _selectedImageFile = imageFile;
+                  });
+                }
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library, color: AppColors.primary),
+              title: const Text('Choose from Gallery'),
+              onTap: () async {
+                Navigator.pop(context);
+                final File? imageFile = await _storageService.pickImageFromGallery();
+                if (imageFile != null) {
+                  setState(() {
+                    _selectedImageFile = imageFile;
+                  });
+                }
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -461,12 +849,28 @@ class _MultiUserScreenState extends State<MultiUserScreen> {
         throw Exception('User not logged in');
       }
 
-      await _firestoreService.addFamilyMember(
+      // Add family member first to get the member ID
+      String memberId = await _firestoreService.addFamilyMember(
         userId: currentUserId,
         name: _nameController.text.trim(),
         relationship: _relationshipController.text.trim(),
         info: _infoController.text.trim(),
       );
+
+      // Upload profile picture if selected
+      if (_selectedImageFile != null) {
+        final uploadedUrl = await _storageService.uploadProfilePicture(
+          userId: memberId,
+          imageFile: _selectedImageFile!,
+        );
+        
+        if (uploadedUrl != null) {
+          await _firestoreService.updateFamilyMemberProfilePicture(
+            memberId: memberId,
+            profilePictureUrl: uploadedUrl,
+          );
+        }
+      }
 
       Navigator.of(context).pop();
       ScaffoldMessenger.of(context).showSnackBar(
