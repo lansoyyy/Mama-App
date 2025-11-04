@@ -418,6 +418,48 @@ class _HealthRecordsScreenState extends State<HealthRecordsScreen>
                   style: TextStyle(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: AppConstants.paddingXS),
+                Container(
+                  width: double.infinity,
+                  height: 200,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(AppConstants.radiusM),
+                    border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(AppConstants.radiusM),
+                    child: Image.network(
+                      fileUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          width: double.infinity,
+                          height: 200,
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceLight,
+                            borderRadius: BorderRadius.circular(AppConstants.radiusM),
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.broken_image,
+                                  color: AppColors.textLight,
+                                  size: AppConstants.iconXL),
+                              const SizedBox(height: AppConstants.paddingS),
+                              Text(
+                                'Failed to load image',
+                                style: TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontSize: AppConstants.fontM,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppConstants.paddingS),
                 InkWell(
                   onTap: () {
                     ScaffoldMessenger.of(context).showSnackBar(
