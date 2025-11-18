@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../models/medication_model.dart';
 import '../../utils/colors.dart';
 import '../../utils/constants.dart';
@@ -75,6 +76,20 @@ class _MedicationDetailScreenState extends State<MedicationDetailScreen> {
       return englishText ?? '';
     }
     return translatedText;
+  }
+
+  // Convert Google Drive URL to direct download URL
+  String _getDirectImageUrl(String url) {
+    if (url.contains('drive.google.com/file/d/')) {
+      // Extract file ID from Google Drive URL
+      final RegExp regex = RegExp(r'/d/([a-zA-Z0-9_-]+)');
+      final match = regex.firstMatch(url);
+      if (match != null) {
+        final fileId = match.group(1);
+        return 'https://drive.google.com/uc?export=view&id=$fileId';
+      }
+    }
+    return url; // Return original URL if not a Google Drive URL
   }
 
   String _getLocalizedCategoryName() {
@@ -254,10 +269,27 @@ class _MedicationDetailScreenState extends State<MedicationDetailScreen> {
               color: widget.category.color.withOpacity(0.1),
               borderRadius: BorderRadius.circular(AppConstants.radiusM),
             ),
-            child: Icon(
-              Icons.medication,
-              color: widget.category.color,
-              size: AppConstants.iconL,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(AppConstants.radiusM),
+              child: medication.imageUrl.startsWith('https')
+                  ? Image.network(
+                      _getDirectImageUrl(medication.imageUrl),
+                      width: 60,
+                      height: 60,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Icon(
+                          Icons.medication,
+                          color: widget.category.color,
+                          size: AppConstants.iconL,
+                        );
+                      },
+                    )
+                  : Icon(
+                      Icons.medication,
+                      color: widget.category.color,
+                      size: AppConstants.iconL,
+                    ),
             ),
           ),
           const SizedBox(width: AppConstants.paddingM),
@@ -420,6 +452,69 @@ class _MedicationDetailScreenState extends State<MedicationDetailScreen> {
               ),
               const SizedBox(height: AppConstants.paddingL),
 
+              // Medication Image
+              if (medication.imageUrl.startsWith('https'))
+                Container(
+                  width: double.infinity,
+                  height: 200,
+                  margin: const EdgeInsets.only(bottom: AppConstants.paddingL),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(AppConstants.radiusM),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(AppConstants.radiusM),
+                    child: Stack(
+                      children: [
+                        Image.network(
+                          _getDirectImageUrl(medication.imageUrl),
+                          width: double.infinity,
+                          height: 200,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              color: Colors.grey[200],
+                              child: const Center(
+                                child: Icon(
+                                  Icons.broken_image,
+                                  size: 50,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                        Positioned(
+                          top: 8,
+                          right: 8,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.6),
+                              borderRadius:
+                                  BorderRadius.circular(AppConstants.radiusS),
+                            ),
+                            child: IconButton(
+                              icon: const Icon(
+                                Icons.fullscreen,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                              onPressed: () =>
+                                  _showFullScreenImage(medication.imageUrl),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
               // Safety Status
               Container(
                 padding: const EdgeInsets.all(AppConstants.paddingM),
@@ -518,6 +613,79 @@ class _MedicationDetailScreenState extends State<MedicationDetailScreen> {
         ),
       ),
     );
+  }
+
+  void _showFullScreenImage(String imageUrl) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => Scaffold(
+          backgroundColor: Colors.black,
+          appBar: AppBar(
+            backgroundColor: Colors.black,
+            iconTheme: const IconThemeData(color: Colors.white),
+          ),
+          body: Center(
+            child: InteractiveViewer(
+              panEnabled: true,
+              boundaryMargin: const EdgeInsets.all(20),
+              minScale: 0.5,
+              maxScale: 4,
+              child: StatefulBuilder(
+                builder: (context, setState) {
+                  return Image.network(
+                    _getDirectImageUrl(imageUrl),
+                    errorBuilder: (context, error, stackTrace) {
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(
+                              Icons.broken_image,
+                              size: 80,
+                              color: Colors.white,
+                            ),
+                            const SizedBox(height: 16),
+                            const Text(
+                              'Failed to load image',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _launchURL(imageUrl),
+                              child: const Text('Open in Browser'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                foregroundColor: Colors.black,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _launchURL(String url) async {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not launch URL')),
+        );
+      }
+    }
   }
 
   Widget _buildSection(String title, IconData icon, List<String> items) {

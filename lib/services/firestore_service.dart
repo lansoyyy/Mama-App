@@ -31,6 +31,8 @@ class FirestoreService {
       _firestore.collection('family_members');
   CollectionReference get _notificationsCollection =>
       _firestore.collection('notifications');
+  CollectionReference get _bloodPressureCollection =>
+      _firestore.collection('blood_pressure');
 
   /// Create user document
   Future<void> createUser({
@@ -1938,5 +1940,248 @@ class FirestoreService {
         'userName': userName,
       },
     );
+  }
+
+  /// Add blood pressure reading
+  Future<String> addBloodPressureReading({
+    required String userId,
+    required int systolic,
+    required int diastolic,
+    required int heartRate,
+    required DateTime timestamp,
+    String notes = '',
+    String position = 'Sitting',
+    String arm = 'Left',
+    String device = '',
+    Map<String, dynamic>? additionalData,
+  }) async {
+    try {
+      DocumentReference doc = await _bloodPressureCollection.add({
+        'userId': userId,
+        'systolic': systolic,
+        'diastolic': diastolic,
+        'heartRate': heartRate,
+        'timestamp': timestamp,
+        'notes': notes,
+        'position': position,
+        'arm': arm,
+        'device': device,
+        'additionalData': additionalData ?? {},
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      // Generate notification for abnormal readings
+      if (systolic >= 140 || diastolic >= 90) {
+        await addNotification(
+          userId: userId,
+          title: 'High Blood Pressure Detected',
+          message:
+              'Your recent blood pressure reading ($systolic/$diastolic) is elevated. Please consult your healthcare provider.',
+          type: 'health_alert',
+          data: {
+            'type': 'blood_pressure',
+            'systolic': systolic,
+            'diastolic': diastolic,
+            'timestamp': timestamp.toIso8601String(),
+          },
+        );
+      }
+
+      return doc.id;
+    } catch (e) {
+      throw Exception('Error adding blood pressure reading: $e');
+    }
+  }
+
+  /// Get user blood pressure readings
+  Stream<QuerySnapshot> getUserBloodPressureReadings(String userId) {
+    return _bloodPressureCollection
+        .where('userId', isEqualTo: userId)
+        .orderBy('timestamp', descending: true)
+        .snapshots();
+  }
+
+  /// Get recent blood pressure readings for a user (last 7 days)
+  Stream<QuerySnapshot> getRecentBloodPressureReadings(String userId) {
+    DateTime sevenDaysAgo = DateTime.now().subtract(const Duration(days: 7));
+    return _bloodPressureCollection
+        .where('userId', isEqualTo: userId)
+        .where('timestamp', isGreaterThanOrEqualTo: sevenDaysAgo)
+        .orderBy('timestamp', descending: true)
+        .snapshots();
+  }
+
+  /// Get blood pressure readings for a specific date range
+  Stream<QuerySnapshot> getBloodPressureReadingsByDateRange(
+    String userId,
+    DateTime startDate,
+    DateTime endDate,
+  ) {
+    return _bloodPressureCollection
+        .where('userId', isEqualTo: userId)
+        .where('timestamp', isGreaterThanOrEqualTo: startDate)
+        .where('timestamp', isLessThanOrEqualTo: endDate)
+        .orderBy('timestamp', descending: true)
+        .snapshots();
+  }
+
+  /// Update blood pressure reading
+  Future<void> updateBloodPressureReading({
+    required String readingId,
+    int? systolic,
+    int? diastolic,
+    int? heartRate,
+    DateTime? timestamp,
+    String? notes,
+    String? position,
+    String? arm,
+    String? device,
+    Map<String, dynamic>? additionalData,
+  }) async {
+    try {
+      Map<String, dynamic> updates = {};
+
+      if (systolic != null) updates['systolic'] = systolic;
+      if (diastolic != null) updates['diastolic'] = diastolic;
+      if (heartRate != null) updates['heartRate'] = heartRate;
+      if (timestamp != null) updates['timestamp'] = timestamp;
+      if (notes != null) updates['notes'] = notes;
+      if (position != null) updates['position'] = position;
+      if (arm != null) updates['arm'] = arm;
+      if (device != null) updates['device'] = device;
+      if (additionalData != null) updates['additionalData'] = additionalData;
+
+      updates['updatedAt'] = FieldValue.serverTimestamp();
+
+      await _bloodPressureCollection.doc(readingId).update(updates);
+    } catch (e) {
+      throw Exception('Error updating blood pressure reading: $e');
+    }
+  }
+
+  /// Delete blood pressure reading
+  Future<void> deleteBloodPressureReading(String readingId) async {
+    try {
+      await _bloodPressureCollection.doc(readingId).delete();
+    } catch (e) {
+      throw Exception('Error deleting blood pressure reading: $e');
+    }
+  }
+
+  /// Get blood pressure statistics for a user
+  Future<Map<String, dynamic>> getBloodPressureStats(String userId) async {
+    try {
+      DateTime thirtyDaysAgo =
+          DateTime.now().subtract(const Duration(days: 30));
+
+      QuerySnapshot readings = await _bloodPressureCollection
+          .where('userId', isEqualTo: userId)
+          .where('timestamp', isGreaterThanOrEqualTo: thirtyDaysAgo)
+          .get();
+
+      if (readings.docs.isEmpty) {
+        return {
+          'totalReadings': 0,
+          'averageSystolic': 0,
+          'averageDiastolic': 0,
+          'averageHeartRate': 0,
+          'highestSystolic': 0,
+          'highestDiastolic': 0,
+          'lowestSystolic': 0,
+          'lowestDiastolic': 0,
+          'normalReadings': 0,
+          'elevatedReadings': 0,
+          'highReadings': 0,
+          'crisisReadings': 0,
+          'dateRange': 'Last 30 days',
+        };
+      }
+
+      int totalReadings = readings.docs.length;
+      int totalSystolic = 0;
+      int totalDiastolic = 0;
+      int totalHeartRate = 0;
+      int highestSystolic = 0;
+      int highestDiastolic = 0;
+      int lowestSystolic = 999;
+      int lowestDiastolic = 999;
+
+      int normalReadings = 0;
+      int elevatedReadings = 0;
+      int highReadings = 0;
+      int crisisReadings = 0;
+
+      for (var doc in readings.docs) {
+        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+        int systolic = data['systolic'] ?? 0;
+        int diastolic = data['diastolic'] ?? 0;
+        int heartRate = data['heartRate'] ?? 0;
+
+        totalSystolic += systolic;
+        totalDiastolic += diastolic;
+        totalHeartRate += heartRate;
+
+        if (systolic > highestSystolic) highestSystolic = systolic;
+        if (diastolic > highestDiastolic) highestDiastolic = diastolic;
+        if (systolic < lowestSystolic) lowestSystolic = systolic;
+        if (diastolic < lowestDiastolic) lowestDiastolic = diastolic;
+
+        // Categorize readings
+        if (systolic < 120 && diastolic < 80) {
+          normalReadings++;
+        } else if (systolic >= 120 && systolic < 130 && diastolic < 80) {
+          elevatedReadings++;
+        } else if (systolic >= 130 && systolic < 140 ||
+            diastolic >= 80 && diastolic < 90) {
+          highReadings++;
+        } else if (systolic >= 140 || diastolic >= 90) {
+          if (systolic > 180 || diastolic > 120) {
+            crisisReadings++;
+          } else {
+            highReadings++;
+          }
+        }
+      }
+
+      return {
+        'totalReadings': totalReadings,
+        'averageSystolic': (totalSystolic / totalReadings).round(),
+        'averageDiastolic': (totalDiastolic / totalReadings).round(),
+        'averageHeartRate': (totalHeartRate / totalReadings).round(),
+        'highestSystolic': highestSystolic,
+        'highestDiastolic': highestDiastolic,
+        'lowestSystolic': lowestSystolic == 999 ? 0 : lowestSystolic,
+        'lowestDiastolic': lowestDiastolic == 999 ? 0 : lowestDiastolic,
+        'normalReadings': normalReadings,
+        'elevatedReadings': elevatedReadings,
+        'highReadings': highReadings,
+        'crisisReadings': crisisReadings,
+        'dateRange': 'Last 30 days',
+      };
+    } catch (e) {
+      throw Exception('Error getting blood pressure stats: $e');
+    }
+  }
+
+  /// Get latest blood pressure reading for a user
+  Future<Map<String, dynamic>?> getLatestBloodPressureReading(
+      String userId) async {
+    try {
+      QuerySnapshot query = await _bloodPressureCollection
+          .where('userId', isEqualTo: userId)
+          .orderBy('timestamp', descending: true)
+          .limit(1)
+          .get();
+
+      if (query.docs.isNotEmpty) {
+        Map<String, dynamic> data =
+            query.docs.first.data() as Map<String, dynamic>;
+        data['id'] = query.docs.first.id;
+        return data;
+      }
+      return null;
+    } catch (e) {
+      throw Exception('Error getting latest blood pressure reading: $e');
+    }
   }
 }

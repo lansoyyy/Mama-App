@@ -58,115 +58,474 @@ List<MedicationCategory> getMedicationCategories() {
   return [
     MedicationCategory(
       id: '1',
-      name: 'Prenatal Vitamins',
-      description: 'Essential vitamins for pregnancy',
-      iconData: Icons.medical_services,
-      color: AppColors.primary,
-      translationFilipino: 'Bitalaminang Prenatal',
-      translationCebuano: 'Bitaminang Prenatal',
-    ),
-    MedicationCategory(
-      id: '2',
-      name: 'Iron Supplements',
-      description: 'Prevent anemia during pregnancy',
-      iconData: Icons.bloodtype,
-      color: AppColors.error,
-      translationFilipino: 'Suplemento sa Bakal',
-      translationCebuano: 'Suplemento sa Bakal',
-    ),
-    MedicationCategory(
-      id: '3',
-      name: 'Folic Acid',
-      description: 'Important for baby development',
+      name: 'Blood Pressure Medications',
+      description: 'Medications for managing hypertension',
       iconData: Icons.favorite,
-      color: AppColors.secondary,
-      translationFilipino: 'Asido na Foliko',
-      translationCebuano: 'Asido nga Foliko',
+      color: Colors.red,
+      translationFilipino: 'Gamot sa Presyon ng Dugo',
+      translationCebuano: 'Tambal sa Presyon sa Dugo',
     ),
-    MedicationCategory(
-      id: '4',
-      name: 'Calcium',
-      description: 'Strengthen bones and teeth',
-      iconData: Icons.health_and_safety,
-      color: AppColors.info,
-      translationFilipino: 'Kalsyo',
-      translationCebuano: 'Kalsyo',
-    ),
-    MedicationCategory(
-      id: '5',
-      name: 'Pain Relief',
-      description: 'Safe pain management options',
-      iconData: Icons.healing,
-      color: AppColors.warning,
-      translationFilipino: 'Panlipas sa Sakit',
-      translationCebuano: 'Panasakit',
-    ),
-    MedicationCategory(
-      id: '6',
-      name: 'Antibiotics',
-      description: 'Understanding safe antibiotics',
-      iconData: Icons.medication_liquid,
-      color: AppColors.success,
-      translationFilipino: 'Antibyotiko',
-      translationCebuano: 'Antibyotiko',
-    ),
+    // MedicationCategory(
+    //   id: '2',
+    //   name: 'Prenatal Vitamins',
+    //   description: 'Essential vitamins for pregnancy',
+    //   iconData: Icons.medical_services,
+    //   color: AppColors.primary,
+    //   translationFilipino: 'Bitalaminang Prenatal',
+    //   translationCebuano: 'Bitaminang Prenatal',
+    // ),
+    // MedicationCategory(
+    //   id: '3',
+    //   name: 'Iron Supplements',
+    //   description: 'Prevent anemia during pregnancy',
+    //   iconData: Icons.bloodtype,
+    //   color: AppColors.error,
+    //   translationFilipino: 'Suplemento sa Bakal',
+    //   translationCebuano: 'Suplemento sa Bakal',
+    // ),
+    // MedicationCategory(
+    //   id: '4',
+    //   name: 'Folic Acid',
+    //   description: 'Important for baby development',
+    //   iconData: Icons.favorite,
+    //   color: AppColors.secondary,
+    //   translationFilipino: 'Asido na Foliko',
+    //   translationCebuano: 'Asido nga Foliko',
+    // ),
+    // MedicationCategory(
+    //   id: '5',
+    //   name: 'Calcium',
+    //   description: 'Strengthen bones and teeth',
+    //   iconData: Icons.health_and_safety,
+    //   color: AppColors.info,
+    //   translationFilipino: 'Kalsyo',
+    //   translationCebuano: 'Kalsyo',
+    // ),
+    // MedicationCategory(
+    //   id: '6',
+    //   name: 'Pain Relief',
+    //   description: 'Safe pain management options',
+    //   iconData: Icons.healing,
+    //   color: AppColors.warning,
+    //   translationFilipino: 'Panlipas sa Sakit',
+    //   translationCebuano: 'Panasakit',
+    // ),
+    // MedicationCategory(
+    //   id: '7',
+    //   name: 'Antibiotics',
+    //   description: 'Understanding safe antibiotics',
+    //   iconData: Icons.medication_liquid,
+    //   color: AppColors.success,
+    //   translationFilipino: 'Antibyotiko',
+    //   translationCebuano: 'Antibyotiko',
+    // ),
   ];
 }
 
 List<MedicationModel> getMedicationsByCategory(String categoryId) {
   switch (categoryId) {
-    case '1': // Prenatal Vitamins
+    case '1': // Blood Pressure Medications
       return [
         MedicationModel(
-          id: 'p1',
-          name: 'Materna',
-          category: 'Prenatal Vitamins',
-          description: 'Complete prenatal multivitamin with DHA',
+          id: 'bp1',
+          name: 'AMLODIPINE',
+          category: 'Blood Pressure Medications',
+          description: 'Calcium channel blocker that relaxes blood vessels',
           uses: [
-            'Supports fetal brain development',
-            'Prevents birth defects',
-            'Reduces risk of preterm birth',
-            'Supports maternal health'
+            'Treats high blood pressure (hypertension)',
+            'Prevents angina (chest pain)',
+            'Reduces workload on the heart',
+            'Improves blood flow'
           ],
           dosage: [
-            'Take one tablet daily with food',
-            'Best taken in the morning',
-            'Continue throughout pregnancy and breastfeeding'
+            'Start with 5mg once daily',
+            'May increase to 10mg once daily',
+            'Take at the same time each day',
+            'Can be taken with or without food'
           ],
-          sideEffects: ['Mild nausea', 'Constipation', 'Dark-colored stools'],
+          sideEffects: [
+            'Swelling in ankles or feet',
+            'Dizziness or lightheadedness',
+            'Flushing or feeling warm',
+            'Headache',
+            'Fatigue'
+          ],
           precautions: [
-            'Do not exceed recommended dosage',
-            'Consult doctor if allergic to any ingredient',
-            'Keep out of reach of children'
+            'Avoid grapefruit or grapefruit juice',
+            'Rise slowly when standing up',
+            'Monitor blood pressure regularly',
+            'Inform doctor of liver problems'
           ],
-          imageUrl: 'assets/images/medications/materna.jpg',
-          isSafeForPregnancy: true,
-          pregnancyCategory: 'A',
-          translationFilipino: 'Materna',
-          translationCebuano: 'Materna',
+          imageUrl:
+              'https://drive.google.com/file/d/1CEquqy02p0U_Tj0dndPKCafq1d7gmvWx/view?usp=drive_link',
+          isSafeForPregnancy: false,
+          pregnancyCategory: 'C',
+          translationFilipino: 'AMLODIPINE',
+          translationCebuano: 'AMLODIPINE',
         ),
         MedicationModel(
-          id: 'p2',
-          name: 'Obimin',
-          category: 'Prenatal Vitamins',
-          description:
-              'Prenatal supplement with essential vitamins and minerals',
+          id: 'bp2',
+          name: 'ENALAPRIL',
+          category: 'Blood Pressure Medications',
+          description: 'ACE inhibitor that relaxes blood vessels',
           uses: [
-            'Provides essential nutrients for pregnancy',
-            'Supports baby growth and development',
-            'Prevents nutritional deficiencies',
-            'Boosts maternal energy'
+            'Treats high blood pressure',
+            'Treats congestive heart failure',
+            'Prevents kidney problems from diabetes',
+            'Improves survival after heart attack'
           ],
           dosage: [
-            'Take one capsule daily',
-            'Preferably with meals',
-            'Continue as prescribed by doctor'
+            'Start with 5mg once daily',
+            'May increase to 10-40mg daily',
+            'Take consistently at same time',
+            'Can be taken with or without food'
           ],
-          sideEffects: ['Stomach upset', 'Headache', 'Changes in urine color'],
+          sideEffects: [
+            'Dry persistent cough',
+            'Dizziness',
+            'Fatigue',
+            'Headache',
+            'Changes in taste'
+          ],
+          precautions: [
+            'Do not use during pregnancy',
+            'Monitor potassium levels',
+            'Stay hydrated',
+            'Report severe dizziness immediately'
+          ],
+          imageUrl:
+              'https://drive.google.com/file/d/1Mmgh9WG_AayrlZOYzqiog7S4kyKeYrKU/view?usp=drive_link',
+          isSafeForPregnancy: false,
+          pregnancyCategory: 'D',
+          translationFilipino: 'ENALAPRIL',
+          translationCebuano: 'ENALAPRIL',
+        ),
+        MedicationModel(
+          id: 'bp3',
+          name: 'FUROSEMIDE',
+          category: 'Blood Pressure Medications',
+          description: 'Loop diuretic that removes excess fluid',
+          uses: [
+            'Treats fluid retention (edema)',
+            'Treats high blood pressure',
+            'Reduces swelling in heart failure',
+            'Treats kidney problems'
+          ],
+          dosage: [
+            'Start with 20-40mg once daily',
+            'May increase to 80mg daily',
+            'Take in morning to avoid nighttime urination',
+            'Monitor weight daily'
+          ],
+          sideEffects: [
+            'Increased urination',
+            'Dizziness',
+            'Muscle cramps',
+            'Weakness',
+            'Electrolyte imbalances'
+          ],
+          precautions: [
+            'Monitor potassium levels',
+            'Stay hydrated but avoid excess fluids',
+            'May cause dehydration',
+            'Avoid sun exposure'
+          ],
+          imageUrl:
+              'https://drive.google.com/file/d/1Y9_gg82iG1IVgVx0tJaJIKZ4FcBPYpQF/view?usp=drive_link',
+          isSafeForPregnancy: false,
+          pregnancyCategory: 'C',
+          translationFilipino: 'FUROSEMIDE',
+          translationCebuano: 'FUROSEMIDE',
+        ),
+        MedicationModel(
+          id: 'bp4',
+          name: 'HYDROCHLOROTHIAZIDE',
+          category: 'Blood Pressure Medications',
+          description: 'Thiazide diuretic that reduces blood pressure',
+          uses: [
+            'Treats high blood pressure',
+            'Reduces fluid retention',
+            'Treats edema',
+            'Prevents kidney stones'
+          ],
+          dosage: [
+            'Start with 12.5-25mg once daily',
+            'May increase to 50mg daily',
+            'Take in morning',
+            'Can be taken with food'
+          ],
+          sideEffects: [
+            'Increased urination',
+            'Dizziness',
+            'Headache',
+            'Muscle weakness',
+            'Increased blood sugar'
+          ],
+          precautions: [
+            'Monitor blood sugar levels',
+            'Protect from sun exposure',
+            'May cause potassium loss',
+            'Regular blood tests needed'
+          ],
+          imageUrl:
+              'https://drive.google.com/file/d/1fmiLVWmVayt1ByVtFkxHWfZhI_zHhDNb/view?usp=drive_link',
+          isSafeForPregnancy: false,
+          pregnancyCategory: 'B',
+          translationFilipino: 'HYDROCHLOROTHIAZIDE',
+          translationCebuano: 'HYDROCHLOROTHIAZIDE',
+        ),
+        MedicationModel(
+          id: 'bp5',
+          name: 'LABETALOL',
+          category: 'Blood Pressure Medications',
+          description:
+              'Beta blocker that reduces heart rate and blood pressure',
+          uses: [
+            'Treats high blood pressure',
+            'Treats hypertensive emergencies',
+            'Controls blood pressure during pregnancy',
+            'Prevents angina'
+          ],
+          dosage: [
+            'Start with 100mg twice daily',
+            'May increase to 2400mg daily',
+            'Take with food',
+            'Divide doses throughout day'
+          ],
+          sideEffects: [
+            'Dizziness',
+            'Fatigue',
+            'Nausea',
+            'Slow heart rate',
+            'Cold hands and feet'
+          ],
+          precautions: [
+            'Do not stop suddenly',
+            'Monitor heart rate',
+            'Avoid driving until effects known',
+            'May mask low blood sugar symptoms'
+          ],
+          imageUrl:
+              'https://drive.google.com/file/d/1XcaPGKm7jMocXe9CJ-6CC3WLab434hD8/view?usp=drive_link',
+          isSafeForPregnancy: true,
+          pregnancyCategory: 'C',
+          translationFilipino: 'LABETALOL',
+          translationCebuano: 'LABETALOL',
+        ),
+        MedicationModel(
+          id: 'bp6',
+          name: 'LOSARTAN',
+          category: 'Blood Pressure Medications',
+          description: 'ARB that blocks blood vessel constriction',
+          uses: [
+            'Treats high blood pressure',
+            'Protects kidneys in diabetes',
+            'Reduces stroke risk',
+            'Treats heart failure'
+          ],
+          dosage: [
+            'Start with 50mg once daily',
+            'May increase to 100mg daily',
+            'Take at same time daily',
+            'Can be taken with or without food'
+          ],
+          sideEffects: [
+            'Dizziness',
+            'Fatigue',
+            'Back pain',
+            'Diarrhea',
+            'Cough (less common than ACE inhibitors)'
+          ],
+          precautions: [
+            'Do not use during pregnancy',
+            'Monitor kidney function',
+            'May cause high potassium',
+            'Report swelling immediately'
+          ],
+          imageUrl:
+              'https://drive.google.com/file/d/1qmecftNiyYWnjoLmx6BbT4qyAqZpeV-4/view?usp=drive_link',
+          isSafeForPregnancy: false,
+          pregnancyCategory: 'D',
+          translationFilipino: 'LOSARTAN',
+          translationCebuano: 'LOSARTAN',
+        ),
+        MedicationModel(
+          id: 'bp7',
+          name: 'METHYLDOPA',
+          category: 'Blood Pressure Medications',
+          description: 'Centrally acting antihypertensive',
+          uses: [
+            'Treats high blood pressure',
+            'Safe for use during pregnancy',
+            'Reduces blood pressure gradually',
+            'Alternative for patients who cannot tolerate other medications'
+          ],
+          dosage: [
+            'Start with 250mg 2-3 times daily',
+            'May increase to 3g daily',
+            'Take with food',
+            'Divide doses throughout day'
+          ],
+          sideEffects: [
+            'Drowsiness',
+            'Dizziness',
+            'Dry mouth',
+            'Headache',
+            'Depression (rare)'
+          ],
+          precautions: [
+            'Avoid driving or operating machinery',
+            'May cause drowsiness',
+            'Monitor for depression',
+            'Regular blood tests needed'
+          ],
+          imageUrl:
+              'https://drive.google.com/file/d/1wKk_juL-XLkaDXRdbLpGYdMiHzQqSFZW/view?usp=drive_link',
+          isSafeForPregnancy: true,
+          pregnancyCategory: 'B',
+          translationFilipino: 'METHYLDOPA',
+          translationCebuano: 'METHYLDOPA',
+        ),
+        MedicationModel(
+          id: 'bp8',
+          name: 'NEBIVOLOL',
+          category: 'Blood Pressure Medications',
+          description: 'Beta blocker with vasodilating properties',
+          uses: [
+            'Treats high blood pressure',
+            'Reduces heart workload',
+            'Improves blood flow',
+            'May help with heart failure'
+          ],
+          dosage: [
+            'Start with 5mg once daily',
+            'May increase to 10mg daily',
+            'Take at same time each day',
+            'Can be taken with food'
+          ],
+          sideEffects: [
+            'Headache',
+            'Dizziness',
+            'Fatigue',
+            'Slow heart rate',
+            'Nausea'
+          ],
+          precautions: [
+            'Do not stop suddenly',
+            'Monitor heart rate',
+            'May cause dizziness',
+            'Avoid alcohol'
+          ],
+          imageUrl:
+              'https://drive.google.com/file/d/1MUmtLc76KHQrTCmeU7NGhnfkFof7HWl7/view?usp=drive_link',
+          isSafeForPregnancy: false,
+          pregnancyCategory: 'C',
+          translationFilipino: 'NEBIVOLOL',
+          translationCebuano: 'NEBIVOLOL',
+        ),
+        MedicationModel(
+          id: 'bp9',
+          name: 'NIFEDIPINE',
+          category: 'Blood Pressure Medications',
+          description: 'Calcium channel blocker for hypertension',
+          uses: [
+            'Treats high blood pressure',
+            'Prevents angina (chest pain)',
+            'Controls rapid heart rate',
+            'Treats Raynaud\'s phenomenon'
+          ],
+          dosage: [
+            'Extended-release: 30-60mg once daily',
+            'Immediate-release: 10-20mg 3 times daily',
+            'Take consistently',
+            'Do not crush extended-release tablets'
+          ],
+          sideEffects: [
+            'Flushing',
+            'Headache',
+            'Dizziness',
+            'Swelling in ankles',
+            'Palpitations'
+          ],
+          precautions: [
+            'Avoid grapefruit juice',
+            'Rise slowly when standing',
+            'May cause rapid heartbeat',
+            'Monitor blood pressure regularly'
+          ],
+          imageUrl:
+              'https://drive.google.com/file/d/1rbuZwGf0dHy_tQhJrW_cKHBEDrxAV_dg/view?usp=drive_link',
+          isSafeForPregnancy: false,
+          pregnancyCategory: 'C',
+          translationFilipino: 'NIFEDIPINE',
+          translationCebuano: 'NIFEDIPINE',
+        ),
+        MedicationModel(
+          id: 'bp10',
+          name: 'SPIRONOLACTONE',
+          category: 'Blood Pressure Medications',
+          description: 'Potassium-sparing diuretic',
+          uses: [
+            'Treats high blood pressure',
+            'Reduces fluid retention',
+            'Treats heart failure',
+            'Prevents low potassium'
+          ],
+          dosage: [
+            'Start with 25-50mg once daily',
+            'May increase to 200mg daily',
+            'Take with food',
+            'Take in morning if possible'
+          ],
+          sideEffects: [
+            'High potassium levels',
+            'Breast enlargement in men',
+            'Irregular menstrual periods',
+            'Dizziness',
+            'Nausea'
+          ],
+          precautions: [
+            'Monitor potassium levels',
+            'Avoid potassium supplements',
+            'May cause hormonal effects',
+            'Regular blood tests needed'
+          ],
+          imageUrl:
+              'https://drive.google.com/file/d/1GW2BxgoLWZclHylhg2l7JabnUYACkghW/view?usp=drive_link',
+          isSafeForPregnancy: false,
+          pregnancyCategory: 'C',
+          translationFilipino: 'SPIRONOLACTONE',
+          translationCebuano: 'SPIRONOLACTONE',
+        ),
+      ];
+    case '2': // Prenatal Vitamins
+      return [
+        MedicationModel(
+          id: 'pv1',
+          name: 'Obimin',
+          category: 'Prenatal Vitamins',
+          description: 'Complete prenatal vitamin supplement',
+          uses: [
+            'Provides essential nutrients during pregnancy',
+            'Supports fetal development',
+            'Prevents nutritional deficiencies',
+            'Maintains maternal health'
+          ],
+          dosage: [
+            'One capsule daily',
+            'Take with meals',
+            'Continue throughout pregnancy and breastfeeding'
+          ],
+          sideEffects: [
+            'Nausea',
+            'Constipation',
+            'Dark stools',
+            'Stomach discomfort'
+          ],
           precautions: [
             'Take with food to reduce stomach upset',
-            'Inform doctor about other medications',
-            'Store in cool, dry place'
+            'Do not exceed recommended dose',
+            'Consult doctor if you have medical conditions'
           ],
           imageUrl: 'assets/images/medications/obimin.jpg',
           isSafeForPregnancy: true,
@@ -174,8 +533,40 @@ List<MedicationModel> getMedicationsByCategory(String categoryId) {
           translationFilipino: 'Obimin',
           translationCebuano: 'Obimin',
         ),
+        MedicationModel(
+          id: 'pv2',
+          name: 'Materna',
+          category: 'Prenatal Vitamins',
+          description: 'Prenatal multivitamin with DHA',
+          uses: [
+            'Supports baby brain development',
+            'Provides essential vitamins and minerals',
+            'Reduces risk of birth defects',
+            'Supports maternal energy levels'
+          ],
+          dosage: [
+            'One tablet daily',
+            'Take with food',
+            'Best taken at same time each day'
+          ],
+          sideEffects: [
+            'Mild nausea',
+            'Constipation',
+            'Fishy aftertaste (due to DHA)'
+          ],
+          precautions: [
+            'Take with meals to reduce side effects',
+            'Inform doctor of other supplements',
+            'May cause urine to turn bright yellow'
+          ],
+          imageUrl: 'assets/images/medications/materna.jpg',
+          isSafeForPregnancy: true,
+          pregnancyCategory: 'A',
+          translationFilipino: 'Materna',
+          translationCebuano: 'Materna',
+        ),
       ];
-    case '2': // Iron Supplements
+    case '3': // Iron Supplements
       return [
         MedicationModel(
           id: 'i1',
@@ -244,7 +635,7 @@ List<MedicationModel> getMedicationsByCategory(String categoryId) {
           translationCebuano: 'Irofol',
         ),
       ];
-    case '3': // Folic Acid
+    case '4': // Folic Acid
       return [
         MedicationModel(
           id: 'f1',
@@ -279,7 +670,7 @@ List<MedicationModel> getMedicationsByCategory(String categoryId) {
           translationCebuano: 'Folart',
         ),
       ];
-    case '4': // Calcium
+    case '5': // Calcium
       return [
         MedicationModel(
           id: 'c1',
@@ -315,7 +706,7 @@ List<MedicationModel> getMedicationsByCategory(String categoryId) {
           translationCebuano: 'Kalsyo Karbonato',
         ),
       ];
-    case '5': // Pain Relief
+    case '6': // Pain Relief
       return [
         MedicationModel(
           id: 'pr1',
@@ -350,7 +741,7 @@ List<MedicationModel> getMedicationsByCategory(String categoryId) {
           translationCebuano: 'Paracetamol',
         ),
       ];
-    case '6': // Antibiotics
+    case '7': // Antibiotics
       return [
         MedicationModel(
           id: 'a1',
@@ -384,6 +775,39 @@ List<MedicationModel> getMedicationsByCategory(String categoryId) {
           pregnancyCategory: 'B',
           translationFilipino: 'Amoxicillin',
           translationCebuano: 'Amoxicillin',
+        ),
+        MedicationModel(
+          id: 'a2',
+          name: 'Cephalexin',
+          category: 'Antibiotics',
+          description: 'Cephalosporin antibiotic',
+          uses: [
+            'Treats bacterial infections',
+            'Respiratory tract infections',
+            'Ear infections',
+            'Skin infections'
+          ],
+          dosage: [
+            '250-500mg every 6 hours',
+            'Complete full course',
+            'Take with food if stomach upset'
+          ],
+          sideEffects: [
+            'Nausea',
+            'Diarrhea',
+            'Stomach pain',
+            'Vaginal itching'
+          ],
+          precautions: [
+            'Inform doctor of penicillin allergy',
+            'Complete full course',
+            'May cause false positive urine glucose'
+          ],
+          imageUrl: 'assets/images/medications/cephalexin.jpg',
+          isSafeForPregnancy: true,
+          pregnancyCategory: 'B',
+          translationFilipino: 'Cephalexin',
+          translationCebuano: 'Cephalexin',
         ),
       ];
     default:
