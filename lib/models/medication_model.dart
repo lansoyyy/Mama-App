@@ -55,7 +55,7 @@ class MedicationCategory {
 
 // Hardcoded medication data
 List<MedicationCategory> getMedicationCategories() {
-  return [
+  List<MedicationCategory> categories = [
     MedicationCategory(
       id: '1',
       name: 'Blood Pressure Medications',
@@ -120,9 +120,15 @@ List<MedicationCategory> getMedicationCategories() {
     //   translationCebuano: 'Antibyotiko',
     // ),
   ];
+
+  // Sort categories alphabetically by name
+  categories.sort((a, b) => a.name.compareTo(b.name));
+  return categories;
 }
 
 List<MedicationModel> getMedicationsByCategory(String categoryId) {
+  List<MedicationModel> medications;
+
   switch (categoryId) {
     case '1': // Blood Pressure Medications
       return [
@@ -810,7 +816,13 @@ List<MedicationModel> getMedicationsByCategory(String categoryId) {
           translationCebuano: 'Cephalexin',
         ),
       ];
+      break;
     default:
-      return [];
+      medications = [];
+      break;
   }
+
+  // Sort medications alphabetically by name
+  medications.sort((a, b) => a.name.compareTo(b.name));
+  return medications;
 }

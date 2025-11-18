@@ -40,11 +40,11 @@ class _MedicationDetailScreenState extends State<MedicationDetailScreen> {
 
   void _filterMedications() {
     setState(() {
-      if (_searchController.text.isEmpty) {
+      if (_searchController.text.trim().isEmpty) {
         _filteredMedications = List.from(_medications);
       } else {
+        final searchLower = _searchController.text.trim().toLowerCase();
         _filteredMedications = _medications.where((medication) {
-          final searchLower = _searchController.text.toLowerCase();
           final nameLower = medication.name.toLowerCase();
           final descriptionLower = medication.description.toLowerCase();
 
