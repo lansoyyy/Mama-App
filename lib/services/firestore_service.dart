@@ -1947,7 +1947,7 @@ class FirestoreService {
   }) async {
     await addNotification(
       userId: userId,
-      title: 'Welcome to MAMA! 👋',
+      title: 'Welcome to HyperLIT! 👋',
       message:
           'Welcome $userName! We\'re here to support your maternal health journey.',
       type: 'welcome',

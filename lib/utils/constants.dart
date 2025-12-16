@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 /// App-wide constants
 class AppConstants {
   // App Information
-  static const String appName = 'MAMA';
+  static const String appName = 'HyperLIT';
   static const String appFullName = 'Medical Adherence Maternal Application';
   static const String appVersion = '1.0.0';
 
