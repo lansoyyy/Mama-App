@@ -61,40 +61,50 @@ class BloodPressureModel {
     };
   }
 
-  // Get blood pressure category based on values
+  bool get hasSymptoms => additionalData?['hasSymptoms'] == true;
+
   String getBloodPressureCategory() {
+    if (systolic > 180 || diastolic > 120) {
+      return hasSymptoms ? 'Hypertensive Emergency' : 'Severe Hypertension';
+    }
+
+    if (systolic >= 140 || diastolic >= 90) {
+      return 'Stage 2 Hypertension';
+    }
+
+    if ((systolic >= 130 && systolic <= 139) ||
+        (diastolic >= 80 && diastolic <= 89)) {
+      return 'Stage 1 Hypertension';
+    }
+
+    if (systolic >= 120 && systolic <= 129 && diastolic < 80) {
+      return 'Elevated';
+    }
+
     if (systolic < 120 && diastolic < 80) {
       return 'Normal';
-    } else if (systolic >= 120 && systolic < 130 && diastolic < 80) {
-      return 'Elevated';
-    } else if (systolic >= 130 && systolic < 140 ||
-        diastolic >= 80 && diastolic < 90) {
-      return 'Hypertension Stage 1';
-    } else if (systolic >= 140 || diastolic >= 90) {
-      return 'Hypertension Stage 2';
-    } else if (systolic > 180 || diastolic > 120) {
-      return 'Hypertensive Crisis';
-    } else {
-      return 'Unknown';
     }
+
+    return 'Unknown';
   }
 
-  // Get color based on blood pressure category
   String getBloodPressureColor() {
     String category = getBloodPressureCategory();
     switch (category) {
       case 'Normal':
-        return '#4CAF50'; // Green
+        return '#8BC34A';
       case 'Elevated':
-        return '#FF9800'; // Orange
-      case 'Hypertension Stage 1':
-        return '#FF5722'; // Deep Orange
-      case 'Hypertension Stage 2':
-        return '#F44336'; // Red
-      case 'Hypertensive Crisis':
-        return '#9C27B0'; // Purple
+        return '#FFEB3B';
+      case 'Stage 1 Hypertension':
+        return '#FF9800';
+      case 'Stage 2 Hypertension':
+        return '#BF360C';
+      case 'Severe Hypertension':
+        return '#8B0000';
+      case 'Hypertensive Emergency':
+        return '#6A1B9A';
       default:
-        return '#9E9E9E'; // Grey
+        return '#9E9E9E';
     }
   }
 
@@ -116,14 +126,15 @@ class BloodPressureModel {
   // Check if reading is abnormal (requires attention)
   bool isAbnormal() {
     String category = getBloodPressureCategory();
-    return category == 'Hypertension Stage 2' ||
-        category == 'Hypertensive Crisis';
+    return category == 'Stage 2 Hypertension' ||
+        category == 'Severe Hypertension' ||
+        category == 'Hypertensive Emergency';
   }
 
   // Check if reading is elevated (moderate concern)
   bool isElevated() {
     String category = getBloodPressureCategory();
-    return category == 'Elevated' || category == 'Hypertension Stage 1';
+    return category == 'Elevated' || category == 'Stage 1 Hypertension';
   }
 
   // Get heart rate category

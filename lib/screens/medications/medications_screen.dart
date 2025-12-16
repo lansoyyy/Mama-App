@@ -7,6 +7,7 @@ import '../../widgets/loading_indicator.dart';
 import '../../widgets/empty_state.dart';
 import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
+import '../../services/local_notification_service.dart';
 
 class MedicationsScreen extends StatefulWidget {
   const MedicationsScreen({super.key});
@@ -653,6 +654,11 @@ class _MedicationsScreenState extends State<MedicationsScreen> {
           ElevatedButton(
             onPressed: () async {
               try {
+                final userId = _authService.currentUserId;
+                if (userId != null) {
+                  await LocalNotificationService.instance
+                      .cancelMedicationReminders(userId, medicationId);
+                }
                 await _firestoreService.deleteMedication(medicationId);
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -729,13 +735,28 @@ class _AddMedicationDialogState extends State<AddMedicationDialog> {
         final timeString =
             '${_selectedTime.hourOfPeriod}:${_selectedTime.minute.toString().padLeft(2, '0')} ${_selectedTime.period.name.toUpperCase()}';
 
-        await _firestoreService.addMedication(
+        final medicationId = await _firestoreService.addMedication(
           userId: userId,
           name: _nameController.text.trim(),
           dosage: _dosageController.text.trim(),
           frequency: _selectedFrequency,
           time: timeString,
           notes: _notesController.text.trim(),
+        );
+
+        int? weeklyWeekday;
+        if (_selectedFrequency == 'Weekly') {
+          weeklyWeekday = DateTime.now().weekday;
+        }
+
+        await LocalNotificationService.instance.scheduleMedicationReminders(
+          userId: userId,
+          medicationId: medicationId,
+          medicationName: _nameController.text.trim(),
+          dosage: _dosageController.text.trim(),
+          frequency: _selectedFrequency,
+          time: timeString,
+          weeklyWeekday: weeklyWeekday,
         );
 
         widget.onMedicationAdded();
@@ -899,6 +920,7 @@ class _EditMedicationDialogState extends State<EditMedicationDialog> {
   bool _isLoading = false;
 
   final FirestoreService _firestoreService = FirestoreService();
+  final AuthService _authService = AuthService();
 
   @override
   void initState() {
@@ -954,6 +976,31 @@ class _EditMedicationDialogState extends State<EditMedicationDialog> {
         time: timeString,
         notes: _notesController.text.trim(),
       );
+
+      final userId = _authService.currentUserId ??
+          (widget.medicationData['userId'] as String?);
+
+      if (userId != null) {
+        int? weeklyWeekday;
+        if (_selectedFrequency == 'Weekly') {
+          final createdAt = widget.medicationData['createdAt'];
+          if (createdAt is Timestamp) {
+            weeklyWeekday = createdAt.toDate().weekday;
+          } else {
+            weeklyWeekday = DateTime.now().weekday;
+          }
+        }
+
+        await LocalNotificationService.instance.scheduleMedicationReminders(
+          userId: userId,
+          medicationId: widget.medicationId,
+          medicationName: _nameController.text.trim(),
+          dosage: _dosageController.text.trim(),
+          frequency: _selectedFrequency,
+          time: timeString,
+          weeklyWeekday: weeklyWeekday,
+        );
+      }
 
       widget.onMedicationUpdated();
 

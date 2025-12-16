@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../utils/colors.dart';
@@ -42,6 +44,7 @@ class _HealthRecordsScreenState extends State<HealthRecordsScreen>
   String _selectedPosition = 'Sitting';
   String _selectedArm = 'Left';
   String _deviceController = '';
+  bool _hasSymptoms = false;
 
   @override
   void initState() {
@@ -446,7 +449,8 @@ class _HealthRecordsScreenState extends State<HealthRecordsScreen>
                   height: 200,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(AppConstants.radiusM),
-                    border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+                    border:
+                        Border.all(color: AppColors.primary.withOpacity(0.3)),
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(AppConstants.radiusM),
@@ -459,7 +463,8 @@ class _HealthRecordsScreenState extends State<HealthRecordsScreen>
                           height: 200,
                           decoration: BoxDecoration(
                             color: AppColors.surfaceLight,
-                            borderRadius: BorderRadius.circular(AppConstants.radiusM),
+                            borderRadius:
+                                BorderRadius.circular(AppConstants.radiusM),
                           ),
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -740,6 +745,11 @@ class _HealthRecordsScreenState extends State<HealthRecordsScreen>
           );
         }
 
+        final notes = snapshot.data!.docs
+            .map((doc) => BloodPressureModel.fromFirestore(
+                doc.id, doc.data() as Map<String, dynamic>))
+            .toList();
+
         return Column(
           children: [
             // Summary card
@@ -783,23 +793,85 @@ class _HealthRecordsScreenState extends State<HealthRecordsScreen>
                 ),
               ),
             ),
+            Container(
+              margin: const EdgeInsets.symmetric(
+                horizontal: AppConstants.paddingM,
+              ),
+              child: CustomCard(
+                child: Padding(
+                  padding: const EdgeInsets.all(AppConstants.paddingM),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Trend',
+                        style: TextStyle(
+                          fontSize: AppConstants.fontL,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: AppConstants.paddingM),
+                      SizedBox(
+                        height: 140,
+                        width: double.infinity,
+                        child: _BloodPressureTrendChart(readings: notes),
+                      ),
+                      const SizedBox(height: AppConstants.paddingS),
+                      Row(
+                        children: [
+                          _buildLegendDot(color: Colors.red, label: 'Systolic'),
+                          const SizedBox(width: AppConstants.paddingM),
+                          _buildLegendDot(
+                              color: Colors.blue, label: 'Diastolic'),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: AppConstants.paddingM),
             // Readings list
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.symmetric(
                     horizontal: AppConstants.paddingM),
-                children: snapshot.data!.docs.map((doc) {
-                  Map<String, dynamic> data =
-                      doc.data() as Map<String, dynamic>;
-                  BloodPressureModel bp =
-                      BloodPressureModel.fromFirestore(doc.id, data);
-                  return _buildBloodPressureCard(bp);
-                }).toList(),
+                children: List.generate(notes.length, (index) {
+                  final bp = notes[index];
+                  final Duration? interval = index + 1 < notes.length
+                      ? bp.timestamp.difference(notes[index + 1].timestamp)
+                      : null;
+                  return _buildBloodPressureCard(bp, interval: interval);
+                }),
               ),
             ),
           ],
         );
       },
+    );
+  }
+
+  Widget _buildLegendDot({required Color color, required String label}) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: AppConstants.fontS,
+            color: AppColors.textSecondary,
+          ),
+        ),
+      ],
     );
   }
 
@@ -835,7 +907,7 @@ class _HealthRecordsScreenState extends State<HealthRecordsScreen>
     );
   }
 
-  Widget _buildBloodPressureCard(BloodPressureModel bp) {
+  Widget _buildBloodPressureCard(BloodPressureModel bp, {Duration? interval}) {
     Color categoryColor = _getCategoryColor(bp.getBloodPressureCategory());
 
     return CustomCard(
@@ -928,6 +1000,16 @@ class _HealthRecordsScreenState extends State<HealthRecordsScreen>
                     color: AppColors.textLight,
                   ),
                 ),
+                if (interval != null) ...[
+                  const SizedBox(height: AppConstants.paddingXS),
+                  Text(
+                    'Interval: ${_formatDuration(interval)}',
+                    style: const TextStyle(
+                      fontSize: AppConstants.fontXS,
+                      color: AppColors.textLight,
+                    ),
+                  ),
+                ],
                 if (bp.notes.isNotEmpty) ...[
                   const SizedBox(height: AppConstants.paddingXS),
                   Text(
@@ -953,6 +1035,7 @@ class _HealthRecordsScreenState extends State<HealthRecordsScreen>
   void _showAddBloodPressureDialog() {
     _clearBloodPressureControllers();
     DateTime selectedDateTime = DateTime.now();
+    bool hasSymptoms = _hasSymptoms;
 
     showDialog(
       context: context,
@@ -1081,6 +1164,18 @@ class _HealthRecordsScreenState extends State<HealthRecordsScreen>
                   ),
                   maxLines: 3,
                 ),
+                const SizedBox(height: AppConstants.paddingS),
+                SwitchListTile(
+                  value: hasSymptoms,
+                  title: const Text('Symptoms present'),
+                  subtitle: const Text(
+                      'Headache, chest pain, shortness of breath, etc.'),
+                  onChanged: (value) {
+                    setState(() {
+                      hasSymptoms = value;
+                    });
+                  },
+                ),
               ],
             ),
           ),
@@ -1092,7 +1187,10 @@ class _HealthRecordsScreenState extends State<HealthRecordsScreen>
             ElevatedButton(
               onPressed: _isLoading
                   ? null
-                  : () => _addBloodPressureReading(selectedDateTime),
+                  : () => _addBloodPressureReading(
+                        selectedDateTime,
+                        hasSymptoms: hasSymptoms,
+                      ),
               child: _isLoading
                   ? const SizedBox(
                       width: 16,
@@ -1124,6 +1222,7 @@ class _HealthRecordsScreenState extends State<HealthRecordsScreen>
               _buildDetailRow('Date & Time', bp.getFormattedDateTime()),
               _buildDetailRow('Position', bp.position),
               _buildDetailRow('Arm', bp.arm),
+              _buildDetailRow('Symptoms', bp.hasSymptoms ? 'Yes' : 'No'),
               if (bp.device.isNotEmpty) _buildDetailRow('Device', bp.device),
               if (bp.notes.isNotEmpty) ...[
                 const SizedBox(height: AppConstants.paddingM),
@@ -1189,6 +1288,22 @@ class _HealthRecordsScreenState extends State<HealthRecordsScreen>
     _selectedPosition = 'Sitting';
     _selectedArm = 'Left';
     _deviceController = '';
+    _hasSymptoms = false;
+  }
+
+  String _formatDuration(Duration duration) {
+    final totalMinutes = duration.inMinutes.abs();
+    final days = totalMinutes ~/ (60 * 24);
+    final hours = (totalMinutes % (60 * 24)) ~/ 60;
+    final minutes = totalMinutes % 60;
+
+    if (days > 0) {
+      return '${days}d ${hours}h';
+    }
+    if (hours > 0) {
+      return '${hours}h ${minutes}m';
+    }
+    return '${minutes}m';
   }
 
   String _formatDateTime(DateTime dateTime) {
@@ -1220,21 +1335,24 @@ class _HealthRecordsScreenState extends State<HealthRecordsScreen>
   Color _getCategoryColor(String category) {
     switch (category) {
       case 'Normal':
-        return Colors.green;
+        return const Color(0xFF8BC34A);
       case 'Elevated':
-        return Colors.orange;
-      case 'Hypertension Stage 1':
-        return Colors.deepOrange;
-      case 'Hypertension Stage 2':
-        return Colors.red;
-      case 'Hypertensive Crisis':
-        return Colors.purple;
+        return const Color(0xFFFFEB3B);
+      case 'Stage 1 Hypertension':
+        return const Color(0xFFFF9800);
+      case 'Stage 2 Hypertension':
+        return const Color(0xFFBF360C);
+      case 'Severe Hypertension':
+        return const Color(0xFF8B0000);
+      case 'Hypertensive Emergency':
+        return const Color(0xFF6A1B9A);
       default:
         return Colors.grey;
     }
   }
 
-  Future<void> _addBloodPressureReading(DateTime timestamp) async {
+  Future<void> _addBloodPressureReading(DateTime timestamp,
+      {required bool hasSymptoms}) async {
     if (_systolicController.text.trim().isEmpty ||
         _diastolicController.text.trim().isEmpty ||
         _heartRateController.text.trim().isEmpty) {
@@ -1275,6 +1393,9 @@ class _HealthRecordsScreenState extends State<HealthRecordsScreen>
         position: _selectedPosition,
         arm: _selectedArm,
         device: _deviceController,
+        additionalData: {
+          'hasSymptoms': hasSymptoms,
+        },
       );
 
       if (mounted) {
@@ -1320,5 +1441,107 @@ class _HealthRecordsScreenState extends State<HealthRecordsScreen>
         _isLoading = false;
       });
     }
+  }
+}
+
+class _BloodPressureTrendChart extends StatelessWidget {
+  final List<BloodPressureModel> readings;
+
+  const _BloodPressureTrendChart({required this.readings});
+
+  @override
+  Widget build(BuildContext context) {
+    if (readings.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final visible = readings.length <= 14
+        ? readings.reversed.toList()
+        : readings.take(14).toList().reversed.toList();
+
+    return CustomPaint(
+      painter: _BloodPressureTrendPainter(readings: visible),
+    );
+  }
+}
+
+class _BloodPressureTrendPainter extends CustomPainter {
+  final List<BloodPressureModel> readings;
+
+  _BloodPressureTrendPainter({required this.readings});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (readings.isEmpty) return;
+
+    final padding = 8.0;
+    final chartRect = Rect.fromLTWH(
+      padding,
+      padding,
+      max(0.0, size.width - padding * 2),
+      max(0.0, size.height - padding * 2),
+    );
+
+    if (chartRect.width <= 0 || chartRect.height <= 0) return;
+
+    int minVal = readings.first.diastolic;
+    int maxVal = readings.first.systolic;
+    for (final r in readings) {
+      minVal = min(minVal, min(r.systolic, r.diastolic));
+      maxVal = max(maxVal, max(r.systolic, r.diastolic));
+    }
+
+    final range = max(1, maxVal - minVal);
+
+    final systolicPaint = Paint()
+      ..color = Colors.red
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+
+    final diastolicPaint = Paint()
+      ..color = Colors.blue
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+
+    final dotPaint = Paint()..style = PaintingStyle.fill;
+
+    final n = readings.length;
+    final dx = n <= 1 ? 0.0 : chartRect.width / (n - 1);
+
+    final systolicPath = Path();
+    final diastolicPath = Path();
+
+    Offset pointFor(int index, int value) {
+      final x = chartRect.left + dx * index;
+      final t = (value - minVal) / range;
+      final y = chartRect.bottom - (t * chartRect.height);
+      return Offset(x, y);
+    }
+
+    for (int i = 0; i < n; i++) {
+      final r = readings[i];
+      final s = pointFor(i, r.systolic);
+      final d = pointFor(i, r.diastolic);
+      if (i == 0) {
+        systolicPath.moveTo(s.dx, s.dy);
+        diastolicPath.moveTo(d.dx, d.dy);
+      } else {
+        systolicPath.lineTo(s.dx, s.dy);
+        diastolicPath.lineTo(d.dx, d.dy);
+      }
+
+      dotPaint.color = Colors.red;
+      canvas.drawCircle(s, 2.5, dotPaint);
+      dotPaint.color = Colors.blue;
+      canvas.drawCircle(d, 2.5, dotPaint);
+    }
+
+    canvas.drawPath(systolicPath, systolicPaint);
+    canvas.drawPath(diastolicPath, diastolicPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _BloodPressureTrendPainter oldDelegate) {
+    return oldDelegate.readings != readings;
   }
 }

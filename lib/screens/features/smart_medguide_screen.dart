@@ -26,7 +26,7 @@ class _SmartMedGuideScreenState extends State<SmartMedGuideScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     _loadMedicationStats();
   }
 
@@ -95,6 +95,7 @@ class _SmartMedGuideScreenState extends State<SmartMedGuideScreen>
             Tab(text: 'Today'),
             Tab(text: 'Schedule'),
             Tab(text: 'History'),
+            Tab(text: 'Interval Guide'),
           ],
         ),
       ),
@@ -104,6 +105,161 @@ class _SmartMedGuideScreenState extends State<SmartMedGuideScreen>
           _buildTodayTab(),
           _buildScheduleTab(),
           _buildHistoryTab(),
+          _buildDrugIntervalGuideTab(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDrugIntervalGuideTab() {
+    return ListView(
+      padding: const EdgeInsets.all(AppConstants.paddingM),
+      children: [
+        Card(
+          elevation: AppConstants.elevationS,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppConstants.radiusM),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(AppConstants.paddingM),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: const [
+                Text(
+                  'Drug Interval Guide',
+                  style: TextStyle(
+                    fontSize: AppConstants.fontXL,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                SizedBox(height: AppConstants.paddingS),
+                Text(
+                  'Use this as a quick guide for spacing common medicines and supplements to reduce interaction risk. If you are unsure, ask your pharmacist or doctor.',
+                  style: TextStyle(
+                    fontSize: AppConstants.fontM,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: AppConstants.paddingM),
+        _buildIntervalRule(
+          title: 'Iron / Calcium / Magnesium vs other medicines',
+          interval: 'Separate by 2–4 hours',
+          details:
+              'Mineral supplements can reduce absorption of some medicines. Space them apart when possible.',
+        ),
+        _buildIntervalRule(
+          title: 'Antacids / Acid reducers vs other medicines',
+          interval: 'Separate by ~2 hours',
+          details:
+              'Antacids can affect absorption of other medicines. Ask a pharmacist for the best spacing for your exact meds.',
+        ),
+        _buildIntervalRule(
+          title: 'Fiber supplements (psyllium) vs medicines',
+          interval: 'Separate by 2 hours',
+          details:
+              'Fiber can reduce absorption. Take medicines at a different time from fiber supplements.',
+        ),
+        _buildIntervalRule(
+          title: 'Levothyroxine (thyroid) and supplements/food',
+          interval: 'Separate by 4 hours from iron/calcium',
+          details:
+              'Thyroid medicine absorption is sensitive to timing. Follow your prescriber instructions closely.',
+        ),
+        _buildIntervalRule(
+          title: 'NSAIDs (ibuprofen/naproxen) with blood pressure medicines',
+          interval: 'Avoid frequent use; consult clinician',
+          details:
+              'NSAIDs may raise blood pressure and reduce the effect of some BP medicines. Use only as advised.',
+        ),
+        _buildIntervalRule(
+          title: 'Grapefruit and certain medicines',
+          interval: 'Avoid grapefruit if warned',
+          details:
+              'Grapefruit can increase levels of some medicines (including some BP meds). Check your label or ask a pharmacist.',
+        ),
+        const SizedBox(height: AppConstants.paddingM),
+        Card(
+          elevation: AppConstants.elevationS,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppConstants.radiusM),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(AppConstants.paddingM),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: const [
+                Text(
+                  'Reminder',
+                  style: TextStyle(
+                    fontSize: AppConstants.fontL,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                SizedBox(height: AppConstants.paddingS),
+                Text(
+                  'This guide is informational and not a substitute for professional advice. Always follow your prescription label and ask your pharmacist about interactions.',
+                  style: TextStyle(
+                    fontSize: AppConstants.fontS,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildIntervalRule({
+    required String title,
+    required String interval,
+    required String details,
+  }) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: AppConstants.paddingM),
+      elevation: AppConstants.elevationS,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppConstants.radiusM),
+      ),
+      child: ExpansionTile(
+        leading: const Icon(Icons.schedule, color: AppColors.primary),
+        title: Text(
+          title,
+          style: const TextStyle(
+            fontSize: AppConstants.fontM,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        subtitle: Text(
+          interval,
+          style: const TextStyle(
+            fontSize: AppConstants.fontS,
+            color: AppColors.textSecondary,
+          ),
+        ),
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppConstants.paddingM,
+              0,
+              AppConstants.paddingM,
+              AppConstants.paddingM,
+            ),
+            child: Text(
+              details,
+              style: const TextStyle(
+                fontSize: AppConstants.fontS,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
         ],
       ),
     );

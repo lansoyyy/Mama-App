@@ -890,13 +890,6 @@ class FeaturesScreen extends StatelessWidget {
         'color': AppColors.warning,
         'route': '/health-records',
       },
-      {
-        'title': 'Milestone Tracker',
-        'description': 'Track maternal and baby milestones',
-        'icon': Icons.child_care,
-        'color': AppColors.success,
-        'route': '/milestone-tracker',
-      },
     ];
 
     return Scaffold(

@@ -21,11 +21,11 @@ import 'screens/features/pharmacy_locator_screen.dart';
 import 'screens/features/emergency_screen.dart';
 import 'screens/features/multi_user_screen.dart';
 import 'screens/features/health_records_screen.dart';
-import 'screens/features/milestone_tracker_screen.dart';
 import 'screens/notifications/notifications_screen.dart';
 import 'screens/profile/edit_profile_screen.dart';
 import 'screens/auth/forgot_password_screen.dart';
 import 'services/rewards_init_service.dart';
+import 'services/local_notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,6 +33,9 @@ void main() async {
     name: 'mama-app-7bce7',
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  await LocalNotificationService.instance.init();
+  await LocalNotificationService.instance.requestPermissions();
 
   // Set system UI overlay style
   SystemChrome.setSystemUIOverlayStyle(
@@ -77,7 +80,6 @@ class MamaApp extends StatelessWidget {
         '/emergency': (context) => const EmergencyScreen(),
         '/multi-user': (context) => const MultiUserScreen(),
         '/health-records': (context) => const HealthRecordsScreen(),
-        '/milestone-tracker': (context) => const MilestoneTrackerScreen(),
         '/notifications': (context) => const NotificationsScreen(),
         '/edit-profile': (context) => const EditProfileScreen(),
         '/forgot-password': (context) => const ForgotPasswordScreen(),

@@ -14,7 +14,6 @@ class AIAssistantScreen extends StatefulWidget {
 }
 
 class _AIAssistantScreenState extends State<AIAssistantScreen> {
-
   final TextEditingController _messageController = TextEditingController();
   final List<Map<String, String>> _messages = [];
   final ScrollController _scrollController = ScrollController();
@@ -25,7 +24,7 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
     super.initState();
     // Add welcome message
     _addMessage('assistant',
-        'Hello! I\'m your AI Maternal Health Assistant. I\'m here to help you with questions about medications, pregnancy health, symptoms, and general maternal wellness. How can I assist you today?');
+        'Hello! I\'m your AI Hypertension Assistant. I\'m here to help you understand blood pressure, hypertension medicines, safe lifestyle changes, and when to seek urgent care. What would you like to ask?');
   }
 
   @override
@@ -78,7 +77,7 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
             {
               "role": "system",
               "content":
-                  "You are a professional AI Maternal Health Assistant for pregnant women and new mothers. Always provide accurate, helpful, and empathetic responses about pregnancy, medications, symptoms, nutrition, and maternal health. Always prioritize safety and recommend consulting healthcare professionals for serious concerns. Be concise but informative. Use bullet points when listing information. If a question is outside your scope, politely redirect to appropriate medical professionals."
+                  "You are a professional AI Hypertension Assistant. Focus on hypertension and blood pressure management: understanding BP readings, medication adherence, common antihypertensive classes and side effects, lifestyle changes (DASH-style diet, sodium reduction, weight, activity), home BP monitoring technique, and red-flag symptoms. Do not give personalized diagnoses or medication dosing changes. For severe symptoms, very high BP, pregnancy, or complex conditions, advise contacting a clinician urgently. Be concise but informative and use bullet points for lists."
             },
             ..._messages
                 .map((m) => {'role': m['role'], 'content': m['content']}),
@@ -103,7 +102,6 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
       });
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -159,7 +157,7 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
-                              'AI Health Assistant',
+                              'AI Hypertension Assistant',
                               style: TextStyle(
                                 fontSize: AppConstants.fontTitle,
                                 fontWeight: FontWeight.bold,
@@ -167,7 +165,7 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
                               ),
                             ),
                             Text(
-                              'Your maternal health companion',
+                              'Your blood pressure companion',
                               style: TextStyle(
                                 fontSize: AppConstants.fontM,
                                 color: Colors.grey[600],
@@ -220,7 +218,7 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            'Ask about medications, pregnancy symptoms, nutrition, and maternal health!',
+                            'Ask about blood pressure categories, hypertension medicines, diet/salt, home BP monitoring, and warning signs.',
                             style: TextStyle(
                               fontSize: AppConstants.fontM,
                               color: AppColors.aiAssistant,
@@ -247,11 +245,11 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
                 child: Row(
                   children: [
                     _buildQuickActionChip(
-                        'Medication Safety', Icons.medication),
+                        'BP Reading Meaning', Icons.monitor_heart),
                     _buildQuickActionChip(
-                        'Pregnancy Symptoms', Icons.pregnant_woman),
-                    _buildQuickActionChip('Nutrition Tips', Icons.restaurant),
-                    _buildQuickActionChip('Exercise', Icons.fitness_center),
+                        'Hypertension Medicines', Icons.medication),
+                    _buildQuickActionChip('DASH & Salt', Icons.restaurant),
+                    _buildQuickActionChip('Emergency Signs', Icons.warning),
                   ],
                 ),
               ),
@@ -517,14 +515,15 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'I am your AI Maternal Health Assistant, designed to provide information about:',
+              'I am your AI Hypertension Assistant, designed to provide information about:',
               style: TextStyle(fontSize: AppConstants.fontM),
             ),
             SizedBox(height: AppConstants.paddingM),
-            Text('• Medication safety during pregnancy'),
-            Text('• Common pregnancy symptoms'),
-            Text('• Nutrition and exercise tips'),
-            Text('• General maternal health guidance'),
+            Text('• Understanding BP readings and categories'),
+            Text('• Hypertension medicines and adherence tips'),
+            Text('• Home BP monitoring technique'),
+            Text('• Diet, salt, and lifestyle guidance'),
+            Text('• When to seek urgent care for symptoms'),
             SizedBox(height: AppConstants.paddingM),
             Text(
               'Note: I am not a substitute for professional medical advice. Always consult with your healthcare provider for medical concerns.',
